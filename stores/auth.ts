@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { useCookies } from "vue3-cookies";
 import { useToast } from "@/composables/useToast";
 import { useAPIs } from "@/composables/useAPIs";
 
@@ -26,10 +25,11 @@ export const useAuthStore = defineStore({
       try {
         const config = useRuntimeConfig();
         const router = useRouter();
-        const { cookies } = useCookies();
+        
+        // Menggunakan useCookie bawaan Nuxt 3
+        const tokenCookie = useCookie(config.public.tokenKey || "token");
 
-        // PERBAIKAN 1: Jangan pecah objeknya. Tangkap utuh sebagai "response"
-        // PERBAIKAN 2: Endpoint biasanya "/login", bukan "/user/login" di Golang
+        // Request login ke backend (Endpoint disesuaikan dengan Golang)
         const response: any = await useAPIs("/login", {
           method: "POST",
           body: payload,
@@ -40,7 +40,7 @@ export const useAuthStore = defineStore({
           throw err;
         });
 
-        // PERBAIKAN 3: Deteksi cerdas. Apakah Golang meletakkan data di luar atau dibungkus "data"
+        // Menentukan data response (menangani struktur data jika dibungkus atau tidak)
         const resData = response?.data ? response.data : response;
 
         if (resData?.success === false) {
@@ -48,20 +48,20 @@ export const useAuthStore = defineStore({
           throw resData;
         }
 
-        // PERBAIKAN 1: Gunakan useCookie Nuxt
-        const tokenCookie = useCookie(config.public.tokenKey || "token");
-        
-        // PERBAIKAN 2: Golang mengirim token langsung sebagai string (resData.token) 
-        // bukan data.token.AccessToken
-        tokenCookie.value = resData.token; 
-        
-        // PERBAIKAN 3: Simpan data User dari Golang (bukan data.user jika strukturnya beda, sesuaikan dengan LoginResponse Golang)
-        this.user = resData.user || resData; 
+        // 1. Simpan Token ke Cookie
+        tokenCookie.value = resData.token;
+
+        // 2. Simpan Data ke State Store
+        this.user = resData.user || resData;
         this.token = resData.token;
         this.loggedIn = true;
 
-        // this.initFCM(); // (Komen dulu jika Firebase belum dipakai)
+        // 3. Muat Menu Dinamis berdasarkan Role User
+        if (this.user?.roleId) {
+          await this.loadAuthMenu({ roleId: this.user.roleId });
+        }
 
+        // 4. Redirect ke Dashboard
         router.push("/dashboard");
       } catch (err) {
         console.error("error.login", err);
@@ -72,61 +72,62 @@ export const useAuthStore = defineStore({
     async logout() {
       const router = useRouter();
       const config = useRuntimeConfig();
-      const { cookies } = useCookies();
+      const tokenCookie = useCookie(config.public.tokenKey || "token");
 
-      // Bersihkan state
+      // Bersihkan state store
       this.loggedIn = false;
       this.token = null;
       this.user = {};
       this.menus = [];
       this.permissions = [];
 
-      // Bersihkan penyimpanan lokal
-      cookies.remove(config.public.tokenKey || 'token');
+      // Bersihkan Cookie dan LocalStorage
+      tokenCookie.value = null;
       localStorage.clear();
 
-      // Kembalikan ke halaman login
+      // Redirect ke halaman login
       router.push("/login");
     },
 
     async loadAuthMenu(payload: any) {
       let permissions: any = [];
-      await useAPIs("/menu-role", {
-        method: "GET",
-        params: {
-          roleId: payload.roleId,
-        },
-      })
-        .then((res: any) => {
-          const data = res?.data || res || [];
-          this.menus = data;
-          
-          if(Array.isArray(data)) {
-              data.forEach((el: any) => {
-                if (el.permissionList) {
-                  el.permissionList.forEach((els: any) => {
-                    permissions.push(els);
-                  });
-                }
-    
-                if (el.children) {
-                  el.children.forEach((el2: any) => {
-                    if (el2.permissionList) {
-                      el2.permissionList.forEach((els2: any) => {
-                        permissions.push(els2);
-                      });
-                    }
+      try {
+        const response: any = await useAPIs("/menu-role", {
+          method: "GET",
+          params: {
+            roleId: payload.roleId,
+          },
+        });
+
+        const data = response?.data || response || [];
+        this.menus = data;
+
+        if (Array.isArray(data)) {
+          data.forEach((el: any) => {
+            // Ambil permission dari menu utama
+            if (el.permissionList) {
+              el.permissionList.forEach((els: any) => {
+                permissions.push(els);
+              });
+            }
+
+            // Ambil permission dari sub-menu (children)
+            if (el.children) {
+              el.children.forEach((el2: any) => {
+                if (el2.permissionList) {
+                  el2.permissionList.forEach((els2: any) => {
+                    permissions.push(els2);
                   });
                 }
               });
-          }
+            }
+          });
+        }
 
-          this.permissions = permissions;
-        })
-        .catch((err) => {
-          console.error("Gagal load menu", err);
-          return err;
-        });
+        this.permissions = permissions;
+      } catch (err) {
+        console.error("Gagal load menu dinamis", err);
+      }
     },
 
     async fetchUser() {
