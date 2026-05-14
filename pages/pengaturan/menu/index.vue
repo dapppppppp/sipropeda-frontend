@@ -30,7 +30,8 @@
 </template>
 
 <script setup lang="ts">
-const { checkPermission } = usePermission()
+// Jika composable ini belum diimplementasikan sepenuhnya, biarkan saja
+// const { checkPermission } = usePermission() 
 
 definePageMeta({
   layout: "admin",
@@ -41,9 +42,7 @@ onBeforeMount(() => {
   // checkPermission("MENU.VIEW")
 })
 
-onMounted(async () => {
-  
-})
+onMounted(async () => {})
 
 const tab = ref(null);
 const pages = ref({ title: "Menu" });

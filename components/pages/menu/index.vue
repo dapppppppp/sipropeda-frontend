@@ -28,14 +28,14 @@
           <v-text-field
             v-model="editedItem.name"
             label="Nama"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             density="compact"
             required
           ></v-text-field>
           <v-text-field
             v-model="editedItem.link"
             label="Link"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             density="compact"
             required
           ></v-text-field>
@@ -55,7 +55,7 @@
           <v-select
             v-model="editedItem.level"
             :items="listLevel"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             label="Level"
             density="compact"
           />
@@ -71,11 +71,11 @@
               variant="outlined"
               clearable
             >
-              <template v-slot:item="{ props, item }">
+            <template v-slot:item="slotProps">
                 <v-list-item
-                  v-bind="props"
-                  :subtitle="`Link : ${item.raw.link}`"
-                  :title="item.raw.name"
+                  v-bind="slotProps.props"
+                  :subtitle="`Link : ${slotProps.item?.raw?.link}`"
+                  :title="slotProps.item?.raw?.name"
                 ></v-list-item>
               </template>
             </v-autocomplete>
@@ -84,7 +84,7 @@
             v-model="editedItem.seq"
             label="Urut"
             density="compact"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             type="number"
           ></v-text-field>
         </v-col>
@@ -96,7 +96,7 @@
           <v-text-field
             v-model="editedItem.permissionLabel"
             label="Label Permission"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             density="compact"
             hide-details="auto"
           ></v-text-field>
@@ -105,7 +105,7 @@
           <v-autocomplete
             v-model="editedItem.actionList"
             :items="listAction"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             color="blue-grey-lighten-2"
             label="Action"
             density="compact"
@@ -124,33 +124,28 @@
 
 <script setup lang="ts">
 import Swal from "sweetalert2";
-import menuService from "../../../services/menu.service";
+import menuService from "@/services/menu.service"; // Pastikan path import benar
 
 const route = useRoute();
 const isLoading: any = ref(false);
 const isLoadingSave: any = ref(false);
 const dialog: any = ref(false);
 const resetDialog = ref(true);
-const showPassword = ref(false);
 const dialogTitle = ref("Tambah Menu");
-const page = ref(1);
 const itemPerPage = ref(10);
-const listMenu = ref([]);
+
+// PERBAIKAN: Berikan tipe 'any' agar TypeScript mengenali property 'raw' pada slot autocomplete
+const listMenu = ref<any[]>([]);
 const listLevel = [1, 2];
 const listAction = ["VIEW", "CREATE", "UPDATE", "DELETE"];
-const filter = ref({
-  q: "",
-  pageNumber: 1,
-  pageSize: itemPerPage.value,
-  sortBy: "",
-  sortType: "",
-});
+
 var tableData: any = ref({
   items: [],
   meta: {
     totalItems: 0,
   },
 });
+
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
   { title: "Nama", key: "name" },
@@ -166,7 +161,7 @@ const headers = ref([
     sortable: false,
   },
 ]);
-const editedItem: any = ref({});
+const editedItem: any = ref({ actionList: [] });
 
 onMounted(async () => {
   loadAll();
@@ -178,41 +173,43 @@ async function loadAll() {
   isLoading.value = true;
   await menuService()
     .retrieve({
-      q: q,
-      pageSize: pageSize ? pageSize : itemPerPage.value,
-      pageNumber: pageNumber ? pageNumber : 1,
-      sortBy: sortBy,
-      sortType: sortType,
+      q: q || "",
+      pageSize: pageSize ? Number(pageSize) : itemPerPage.value,
+      pageNumber: pageNumber ? Number(pageNumber) : 1,
+      sortBy: sortBy || "",
+      sortType: sortType || "",
     })
     .then((res: any) => {
       isLoading.value = false;
       tableData.value = {
         items: res.data != null ? res.data.items : [],
-        meta: res.data.meta,
+        meta: res.data != null ? res.data.meta : { totalItems: 0 },
       };
-    });
+    }).catch(() => { isLoading.value = false; });
 }
 
 function loadAllMenu() {
   menuService()
-    .retrieveAll({})
-    .then((response) => {
+    .retrieveAll()
+    .then((response: any) => {
       listMenu.value = response.data || [];
     });
 }
 
 function handleSave() {
   isLoadingSave.value = true;
-  let action = editedItem.value.actionList.join(",");
+  let action = editedItem.value.actionList ? editedItem.value.actionList.join(",") : "";
   editedItem.value.action = action || null;
   editedItem.value.level = Number(editedItem.value.level);
   editedItem.value.seq = Number(editedItem.value.seq);
+  
   menuService()
     .save(editedItem.value)
     .then((res: any) => {
       handleClose();
       useToast("success", "Data Berhasil Disimpan");
       loadAll();
+      loadAllMenu();
     })
     .catch((err: any) => {
       isLoadingSave.value = false;
@@ -221,7 +218,7 @@ function handleSave() {
 
 function addItem() {
   resetDialog.value = false;
-  editedItem.value = {};
+  editedItem.value = { actionList: [] };
   dialogTitle.value = "Tambah Menu";
   dialog.value = true;
 }
@@ -231,12 +228,14 @@ async function editItem(x: any) {
   await menuService()
     .retrieveById(x.id)
     .then((res: any) => {
-      if (res.data.id) {
+      if (res.data && res.data.id) {
         editedItem.value = res.data;
         dialogTitle.value = "Edit Menu";
         if (editedItem.value.action) {
           let action = editedItem.value.action.split(",");
           editedItem.value.actionList = action;
+        } else {
+          editedItem.value.actionList = [];
         }
         dialog.value = true;
       }
@@ -259,10 +258,11 @@ async function deleteItem(x: any) {
     if (result.isConfirmed) {
       menuService()
         .destroy(x.id)
-        .then((response) => {
+        .then((response: any) => {
           if (response.data) {
             useToast("success", "Data Berhasil Dihapus");
             loadAll();
+            loadAllMenu();
           }
         });
     }
@@ -272,7 +272,7 @@ async function deleteItem(x: any) {
 function handleClose() {
   isLoadingSave.value = false;
   resetDialog.value = true;
-  editedItem.value = {};
+  editedItem.value = { actionList: [] };
   dialog.value = false;
 }
 </script>

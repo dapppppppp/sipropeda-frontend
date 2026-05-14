@@ -26,19 +26,7 @@
         </div>
       </v-col>
       <v-col cols="12" md="4">
-        <!-- <v-autocomplete
-          v-model="filter.commodityId"
-          :items="listKomoditas"
-          item-title="nama"
-          item-value="id"
-          label="Komoditas"
-          density="compact"
-          variant="outlined"
-          hide-details="auto"
-          @update:modelValue="loadMenus"
-          clearable
-        ></v-autocomplete> -->
-      </v-col>
+        </v-col>
     </v-row>
     <v-row>
       <v-col cols="12" md="12">
@@ -61,7 +49,7 @@
             <template v-for="(x, i) in listMenu" :key="'A' + i">
               <tr :class="x.children ? 'bgRowHeader' : ''">
                 <td>
-                  <div class="d-flex">
+                  <div class="d-flex align-center">
                     <UiIcon :item="x.icon" /> &nbsp;&nbsp;
                     <span style="margin-top: 2px">{{ x.name }}</span>
                   </div>
@@ -109,7 +97,7 @@
               </tr>
               <tr v-for="(d, j) in x.children || []" :key="i + 'B' + j">
                 <td>
-                  <div class="d-flex" style="padding-left: 24px">
+                  <div class="d-flex align-center" style="padding-left: 24px">
                     <UiIcon :item="d.icon" /> &nbsp;&nbsp;
                     <span style="margin-top: 2px">{{ d.name }}</span>
                   </div>
@@ -159,7 +147,7 @@
           </tbody>
           <tbody v-else>
             <tr>
-              <td colspan="5">Data Tidak Ditemukan</td>
+              <td colspan="5" class="text-center py-4">Data Tidak Ditemukan</td>
             </tr>
           </tbody>
         </v-table>
@@ -174,14 +162,12 @@ import menuService from "@/services/menu.service";
 import roleService from "@/services/role.service";
 import { useAuthStore } from "@/stores/auth";
 
-const route = useRoute();
 const filter: any = ref({
   roleId: null,
   commodityId: null,
 });
 const listMenu: any = ref([]);
 const listRole: any = ref([]);
-const listKomoditas: any = ref([]);
 const isLoading = ref(false);
 const authStore = useAuthStore();
 
@@ -191,7 +177,7 @@ onMounted(async () => {
 
 function loadAllRole() {
   roleService()
-    .retrieveAll({})
+    .retrieveAll({}) // Sesuaikan parameter ini jika roleService berubah
     .then((res: any) => {
       listRole.value = res.data || [];
     });
@@ -200,42 +186,40 @@ function loadAllRole() {
 async function loadMenuStore() {
   const roleID = authStore.user.roleId;
   const commodityId = authStore.user.commodityId;
-  if (
-    roleID != filter.value.roleId &&
-    commodityId != filter.value.commodityId
-  ) {
-    return;
+  
+  // Hanya reload jika yang diubah adalah role / komoditas pengguna yang sedang login
+  if (roleID === filter.value.roleId) {
+    await authStore
+      .loadAuthMenu({
+        roleId: roleID,
+        commodityId: commodityId,
+      })
+      .catch((err: any) => {
+        console.log("err log : ", err);
+      });
   }
-
-  await authStore
-    .loadAuthMenu({
-      roleId: roleID,
-      commodityId: commodityId,
-    })
-    .catch((err: any) => {
-      console.log("err log : ", err);
-    });
 }
 
 function loadMenus() {
+  if (!filter.value.roleId) return;
+
+  // Perbaikan 1: Panggil fungsi yang benar dari menu.service.ts menggunakan argumen posisi (positional arguments)
   menuService()
-    .retrieveRoleMenuTrx({
-      roleId: filter.value.roleId,
-      commodityId: filter.value.commodityId,
-    })
-    .then((response) => {
+    .retrieveMenuByRoleTrx(filter.value.roleId, filter.value.commodityId)
+    .then((response: any) => {
       let menus = response.data || [];
       listMenu.value = menus;
 
       for (let index = 0; index < listMenu.value.length; index++) {
         let el: any = listMenu.value[index];
 
-        // cek permission
+        // cek permission (Hak akses saat ini)
         el.view = hasMenuPermission(el.permissionList, "VIEW");
         el.create = hasMenuPermission(el.permissionList, "CREATE");
         el.update = hasMenuPermission(el.permissionList, "UPDATE");
         el.delete = hasMenuPermission(el.permissionList, "DELETE");
 
+        // cek action (Aksi apa saja yang TERSEDIA untuk dicentang di menu tersebut)
         el.viewVisible = hasMenuPermission(el.actionList, "VIEW");
         el.createVisible = hasMenuPermission(el.actionList, "CREATE");
         el.updateVisible = hasMenuPermission(el.actionList, "UPDATE");
@@ -245,7 +229,6 @@ function loadMenus() {
           for (let ind = 0; ind < el.children.length; ind++) {
             const el2 = el.children[ind];
 
-            // cek permission
             el2.view = hasMenuPermission(el2.permissionList, "VIEW");
             el2.create = hasMenuPermission(el2.permissionList, "CREATE");
             el2.update = hasMenuPermission(el2.permissionList, "UPDATE");
@@ -262,59 +245,46 @@ function loadMenus() {
 }
 
 function hasMenuPermission(arr: any, val: any) {
-  if (!arr) {
-    return false;
-  }
-
-  const find = arr.find((el: any) => el == val);
+  if (!arr) return false;
+  const find = arr.find((el: any) => el === val);
   return find ? true : false;
 }
 
 function joinPermission(x: any) {
   let permission = [];
-  if (x.view) {
-    permission.push("VIEW");
-  }
-
-  if (x.create) {
-    permission.push("CREATE");
-  }
-
-  if (x.update) {
-    permission.push("UPDATE");
-  }
-
-  if (x.delete) {
-    permission.push("DELETE");
-  }
-  let join = permission.join(",");
-  return join;
+  if (x.view) permission.push("VIEW");
+  if (x.create) permission.push("CREATE");
+  if (x.update) permission.push("UPDATE");
+  if (x.delete) permission.push("DELETE");
+  
+  return permission.join(",");
 }
 
 function save() {
   let menu: any = [];
+  
   listMenu.value.forEach((el: any) => {
     let permission = joinPermission(el);
     if (permission) {
       menu.push({
-        id: el.id,
+        id: el.id || "",
         menuId: el.menuId,
         roleId: filter.value.roleId,
         commodityId: filter.value.commodityId,
-        permission: permission || null,
+        permission: permission,
       });
     }
 
     if (el.children) {
       el.children.forEach((el2: any) => {
-        let permission = joinPermission(el2);
-        if (permission) {
+        let permissionChild = joinPermission(el2);
+        if (permissionChild) {
           menu.push({
-            id: el2.id,
+            id: el2.id || "",
             menuId: el2.menuId,
             roleId: filter.value.roleId,
             commodityId: filter.value.commodityId,
-            permission: permission || null,
+            permission: permissionChild,
           });
         }
       });
@@ -322,15 +292,17 @@ function save() {
   });
 
   isLoading.value = true;
+  
+  // Perbaikan 2: Panggil fungsi yang benar dari menu.service.ts
   menuService()
-    .CreateBulkRoleMenu({
+    .saveBulkMenuRole({
       data: menu,
     })
-    .then((res) => {
+    .then((res: any) => {
       isLoading.value = false;
       useToast("success", "Data Berhasil Disimpan");
       loadMenus();
-      loadMenuStore();
+      loadMenuStore(); // Update state global agar menu kiri langsung ter-refresh
     })
     .catch((err: any) => {
       isLoading.value = false;
