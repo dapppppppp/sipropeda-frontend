@@ -1,0 +1,11 @@
+.env
+.env.*
+node_modules
+.nuxt
+.output
+.git
+.DS_Store
+README.md
+Dockerfile
+docker-compose.yml
+Jenkinsfile

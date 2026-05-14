@@ -1,56 +1,45 @@
 {
   "name": "sipropeda-frontend",
   "version": "1.0.0",
-  "description": "My new Nuxt module",
-  "repository": "your-org/my-module",
-  "license": "MIT",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/types.d.mts",
-      "import": "./dist/module.mjs"
-    }
-  },
-  "main": "./dist/module.mjs",
-  "typesVersions": {
-    "*": {
-      ".": [
-        "./dist/types.d.mts"
-      ]
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "workspaces": [
-    "playground"
-  ],
+  "private": true,
   "scripts": {
-    "prepack": "nuxt-module-build build",
-    "dev": "npm run dev:prepare && nuxt dev playground",
-    "dev:build": "nuxt build playground",
-    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
-    "release": "npm run lint && npm run test && npm run prepack && changelogen --release && npm publish && git push --follow-tags",
-    "lint": "eslint .",
-    "test": "vitest run",
-    "test:watch": "vitest watch",
-    "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "start": "nuxt start",
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@nuxt/kit": "^4.4.5"
+    "@mdi/font": "7.4.47",
+    "@pinia-plugin-persistedstate/nuxt": "^1.2.1",
+    "@pinia/nuxt": "0.5.4",
+    "axios": "1.7.6",
+    "dayjs": "^1.11.13",
+    "exceljs": "^4.4.0",
+    "html-to-pdfmake": "^2.5.32",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "pdfmake": "^0.2.20",
+    "pinia": "2.2.2",
+    "pinia-plugin-persistedstate": "^4.7.1",
+    "remixicon": "2.5.0",
+    "sass": "1.70.0",
+    "sweetalert2": "^11.26.3",
+    "vee-validate": "4.6.7",
+    "vite-plugin-vuetify": "2.0.4",
+    "vue": "^3.5.7",
+    "vue-tabler-icons": "2.21.0",
+    "vue3-cookies": "^1.0.6",
+    "vue3-easy-data-table": "1.5.47",
+    "vue3-perfect-scrollbar": "1.6.1",
+    "vuetify": "3.7.1",
+    "yup": "1.4.0"
   },
   "devDependencies": {
-    "@nuxt/devtools": "^3.2.4",
-    "@nuxt/eslint-config": "^1.15.2",
-    "@nuxt/module-builder": "^1.0.2",
-    "@nuxt/schema": "^4.4.5",
-    "@nuxt/test-utils": "^4.0.3",
-    "@types/node": "latest",
-    "changelogen": "^0.6.2",
-    "eslint": "^10.3.0",
-    "nuxt": "^4.4.5",
-    "typescript": "~6.0.3",
-    "vitest": "^4.1.5",
-    "vue-tsc": "^3.2.8"
+    "@types/html-to-pdfmake": "^2.4.4",
+    "@types/lodash": "^4.17.9",
+    "@types/pdfmake": "^0.2.12",
+    "nuxt": "3.13.2"
   }
 }

@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  chm-fe:
+    image: registry.thegreatsoft.com/chm/complain-handling-fe:v1
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: chm-fe
+    ports:
+      - "1100:1100"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NUXT_API_HOST=${API_HOST}
+      - NUXT_PUBLIC_TOKEN_KEY=${TOKEN_KEY}
+      - NUXT_PUBLIC_API_BASE=/api
+      - NUXT_PUBLIC_BASE_URL=${API_HOST}
+      - NUXT_PUBLIC_DOMAIN=${DOMAIN}
+      - NUXT_PUBLIC_API_KEY=${API_KEY}
+      - NUXT_PUBLIC_FIREBASE_API_KEY=${FIREBASE_API_KEY}
+      - NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}
+      - NUXT_PUBLIC_FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}
+      - NUXT_PUBLIC_FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - NUXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${FIREBASE_MEASUREMENT_ID}
+      - NUXT_PUBLIC_FIREBASE_VAPID_KEY=${FIREBASE_VAPID_KEY}
+    restart: always
