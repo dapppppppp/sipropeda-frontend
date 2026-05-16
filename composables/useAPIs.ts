@@ -1,37 +1,32 @@
 import { ofetch } from "ofetch";
-import { useRuntimeConfig, useCookie, navigateTo } from "#app";
+import { useCookies } from "vue3-cookies";
 import { useToast } from "@/composables/useToast";
 
 export const useAPIs = (url: any, opts: any = {}) => {
-    const config = useRuntimeConfig();
-    
-    // GUNAKAN useCookie BAWAAN NUXT (Tahan Banting saat Refresh/SSR)
-    const token = useCookie(config.public.tokenKey || "token");
-    const backendUrl = config.public.apiUrl || "http://localhost:8080/v1";
+    let config = useRuntimeConfig();
+    let { cookies } = useCookies();
+    let token = cookies.get(config.public.tokenKey || "token");
 
     const apiFetch = ofetch.create({
-        baseURL: backendUrl, 
+        baseURL: config.public.apiUrl || "http://localhost:8080/v1", // Disesuaikan dengan URL Golang
         onRequest({ options }) {
-            // Baca langsung dari .value
-            if (token.value) {
+            if (token) {
                 options.headers = { 
-                    ...options.headers,
-                    Authorization: `Bearer ${token.value}` 
+                    ...options.headers, 
+                    Authorization: `Bearer ${token}` 
                 };
             }
         },
         async onResponseError({ response }) {
-            const error = response._data?.error || response._data?.message || "Terjadi Kesalahan";
-            console.error("API Error:", error);
+            // Menangkap pesan error dari struktur JSON backend Golang Anda
+            const error = response._data?.data?.error || response._data?.error || response._data?.message || "Terjadi Kesalahan";
+            useToast("error", error);
             
             if (response.status === 401) {
-                useToast("error", "Sesi telah berakhir, silakan login kembali.");
-                // Hapus token jika expired
-                token.value = null; 
                 navigateTo("/logout");
             }
         },
     });
 
     return apiFetch(url, opts);
-}
+};

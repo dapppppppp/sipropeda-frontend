@@ -27,7 +27,7 @@ const authStore = useAuthStore(); // 2. Inisialisasi Auth Store
           class="leftPadding" 
           :item="item" 
           :level="0" 
-          v-else-if="item.children" 
+          v-else-if="item.children && item.children.length > 0" 
         />
 
         <NavItem :item="item" v-else />

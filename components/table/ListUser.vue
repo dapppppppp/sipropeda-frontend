@@ -67,21 +67,9 @@
         item-value="id"
         hide-default-footer
       >
-        <!-- <template v-slot:loading>
-          <v-skeleton-loader type="table-row@5"></v-skeleton-loader>
-        </template> -->
         <template v-slot:[`item.no`]="{ item }">
           {{ numberInc + parseInt(tableData.items.indexOf(item)) + 1 }}.
         </template>
-        <!-- <template
-          v-for="header in headers.filter((header) =>
-            header.hasOwnProperty('formatter')
-          )"
-          v-slot:[`item.${header.value}`]="{ value }"
-        > -->
-          <!-- v-slot:[`item.${header.value}`]="{ header, value }" -->
-          <!-- {{ header.formatter(value) }}
-        </template> -->
         <template v-slot:[`item.actions`]="{ item }">
           <v-btn
             v-if="hasPermission('UPDATE')"
@@ -92,7 +80,7 @@
             class="mr-1"
             @click="handleEditItem(item)"
           >
-            <EditIcon class="text-warning" size="18" />
+            <v-icon size="18">mdi-pencil</v-icon>
             <v-tooltip activator="parent" location="bottom">Edit</v-tooltip>
           </v-btn>
 
@@ -100,16 +88,17 @@
             v-if="hasPermission('DELETE')"
             icon
             variant="tonal"
-            color="warning"
+            color="error"
             size="32"
             class="mr-1"
             @click="deleteItem(item)"
           >
-            <TrashIcon class="text-error" size="18" />
+            <v-icon size="18">mdi-delete</v-icon>
             <v-tooltip activator="parent" location="bottom">Hapus</v-tooltip>
           </v-btn>
 
           <v-btn
+            v-if="hasPermission('UPDATE')"
             icon
             variant="tonal"
             color="teal"
@@ -117,13 +106,12 @@
             class="mr-1"
             @click="reset(item)"
           >
-            <RefreshIcon class="text-error" size="18" />
+            <v-icon size="18">mdi-lock-reset</v-icon>
             <v-tooltip activator="parent" location="bottom">Reset Password</v-tooltip>
           </v-btn>
         </template>
       </v-data-table>
 
-      <!-- Custom Pagination -->
       <v-row class="mt-3">
         <v-col md="6" cols="12">
           <div class="d-flex" style="font-size: 15px;"
@@ -160,48 +148,19 @@
 <script>
 export default {
   props: {
-    title: {
-      type: String,
-    },
-    defaultSortBy: {
-      type: String,
-    },
-    searchTitle: {
-      type: String,
-    },
+    title: { type: String },
+    defaultSortBy: { type: String },
+    searchTitle: { type: String },
     tableData: {
       type: Object,
-      default: {
-        items: [],
-        meta: {
-          total: 0,
-        },
-      },
+      default: { items: [], meta: { total: 0 } },
     },
-    headers: {
-      type: Array,
-      default: [],
-    },
-    itemFilter: {
-      type: Array,
-      default: () => [],
-    },
-    labelFilter: {
-      type: String,
-      default: () => "Filter",
-    },
-    permission: {
-      type: String,
-      default: "",
-    },
-    loading: {
-      type: Boolean,
-      default: false,
-    },
-    listRole: {
-      type: Array,
-      default: () => [],
-    },
+    headers: { type: Array, default: [] },
+    itemFilter: { type: Array, default: () => [] },
+    labelFilter: { type: String, default: () => "Filter" },
+    permission: { type: String, default: "" },
+    loading: { type: Boolean, default: false },
+    listRole: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -212,12 +171,7 @@ export default {
         { value: 40, title: "40" },
         { value: 50, title: "50" },
       ],
-      sortBy: [
-        {
-          key: this.defaultSortBy,
-          order: "desc",
-        },
-      ],
+      sortBy: [{ key: this.defaultSortBy, order: "desc" }],
       sortDesc: [true],
       filter: {
         q: "",
@@ -226,56 +180,45 @@ export default {
         sortBy: this.defaultSortBy,
         sortType: "desc",
         idRole: null,
-        regionalId: null,
-        kebunId: null,
-        afdelingId: null,
       },
     };
   },
   computed: {
     numberInc() {
-      var number = parseInt(this.filter.pageNumber - 1) * this.itemsPerPage;
-      return number;
+      return parseInt(this.filter.pageNumber - 1) * this.itemsPerPage;
     },
-  },
-  mounted() {
-    
   },
   methods: {
     hasPermission(val){
-      const { hasPermission } = usePermission()
-      const tag = `${this.permission}.${val}`
-      return hasPermission(tag)
+      const { hasPermission } = usePermission();
+      const tag = `${this.permission}.${val}`;
+      return hasPermission(tag);
     },
-
     handleApplyFilter() {
       const filter = Object.assign({}, this.filter);
       this.filter = {
         q: filter.q,
         pageSize: this.itemsPerPage,
         pageNumber: 1,
-        sortBy: this.sortBy[0].key,
-        sortType: this.sortBy[0].order,
+        sortBy: this.sortBy[0]?.key || this.defaultSortBy,
+        sortType: this.sortBy[0]?.order || "desc",
         t: Date.now(),
         idRole: filter.idRole,
       };
-      this.$router.replace({
-        path: this.$route.path,
-        query: this.filter,
-      });
+      this.$router.replace({ path: this.$route.path, query: this.filter });
     },
     handleRefreshItems() {
       const resetFilter = Object.assign({}, this.filter);
       resetFilter.q = "";
       resetFilter.pageNumber = 1;
-      (resetFilter.t = Date.now()), (this.filter = resetFilter);
+      resetFilter.t = Date.now();
+      this.filter = resetFilter;
       this.handleApplyFilter();
     },
     handleAddItem() {
       this.$emit("addItem");
     },
     handleEditItem(item) {
-      // copy item to a before edit
       let a = JSON.parse(JSON.stringify(item));
       this.$emit("editItem", a);
     },
@@ -287,27 +230,12 @@ export default {
     },
     handlePageChanged(page) {
       this.filter.pageNumber = page;
-      this.$router.replace({
-        path: this.$route.path,
-        query: this.filter,
-      });
-    },
-    updateFilterQuery(query) {
-      const filter = Object.assign(this.filter, query);
-      filter.pageNumber = parseInt(filter.pageNumber);
-      filter.pageSize = parseInt(
-        filter.pageSize ? filter.pageSize : this.itemsPerPage
-      );
-      filter.t = Date.now();
-      return filter;
+      this.$router.replace({ path: this.$route.path, query: this.filter });
     },
     async handleClear() {
-      await this.handleResetFilter();
+      this.handleResetFilter();
       this.filter.t = Date.now();
-      this.$router.replace({
-        path: this.$route.path,
-        query: this.filter,
-      });
+      this.$router.replace({ path: this.$route.path, query: this.filter });
     },
     handleResetFilter() {
       this.filter = {
@@ -323,25 +251,18 @@ export default {
       if (this.sortBy.length > 0) {
         this.filter.sortBy = this.sortBy[0].key;
         this.filter.sortType = this.sortBy[0].order;
-        this.$router.replace({
-          path: this.$route.path,
-          query: this.filter,
-        });
+        this.$router.replace({ path: this.$route.path, query: this.filter });
       }
     },
     getItemPerPage(val) {
       this.itemsPerPage = +val;
       this.filter.pageSize = this.itemsPerPage;
-      this.$router.replace({
-        path: this.$route.path,
-        query: this.filter,
-      });
+      this.$router.replace({ path: this.$route.path, query: this.filter });
     },
   },
   watch: {
     "$route.query": {
       handler(query) {
-        // this.filter = this.updateFilterQuery(query);
         this.$emit("fetchData");
       },
       immediate: true,
@@ -358,7 +279,7 @@ export default {
   border-collapse: collapse;
 }
 
- .select {
-    width: 60px;
-  }
+.select {
+  width: 60px;
+}
 </style>

@@ -45,9 +45,9 @@ const props = defineProps({ item: Object, level: Number });
     <template
       v-for="(subitem, i) in item.children"
       :key="i"
-      v-if="item.children"
+      v-if="item.children && item.children.length > 0"
     >
-      <LcFullVerticalSidebarNavCollapse :item="subitem" v-if="subitem.children" :level="level + 1" />
+      <LcFullVerticalSidebarNavCollapse :item="subitem" v-if="subitem.children && subitem.children.length > 0" :level="level + 1" />
       <LcFullVerticalSidebarNavItem :item="subitem" :level="level + 1" v-else></LcFullVerticalSidebarNavItem>
     </template>
   </v-list-group>

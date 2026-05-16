@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { useToast } from "@/composables/useToast";
 import { useAPIs } from "@/composables/useAPIs";
+import { useCookies } from "vue3-cookies";
 
 interface authType {
   user?: any;
@@ -26,10 +27,9 @@ export const useAuthStore = defineStore({
         const config = useRuntimeConfig();
         const router = useRouter();
         
-        // Menggunakan useCookie bawaan Nuxt 3
-        const tokenCookie = useCookie(config.public.tokenKey || "token");
+        // Gunakan vue3-cookies
+        const { cookies } = useCookies();
 
-        // Request login ke backend (Endpoint disesuaikan dengan Golang)
         const response: any = await useAPIs("/login", {
           method: "POST",
           body: payload,
@@ -40,7 +40,6 @@ export const useAuthStore = defineStore({
           throw err;
         });
 
-        // Menentukan data response (menangani struktur data jika dibungkus atau tidak)
         const resData = response?.data ? response.data : response;
 
         if (resData?.success === false) {
@@ -48,8 +47,8 @@ export const useAuthStore = defineStore({
           throw resData;
         }
 
-        // 1. Simpan Token ke Cookie
-        tokenCookie.value = resData.token;
+        // 1. Simpan Token ke Cookie menggunakan vue3-cookies
+        cookies.set(config.public.tokenKey || "token", resData.token);
 
         // 2. Simpan Data ke State Store
         this.user = resData.user || resData;
@@ -72,7 +71,7 @@ export const useAuthStore = defineStore({
     async logout() {
       const router = useRouter();
       const config = useRuntimeConfig();
-      const tokenCookie = useCookie(config.public.tokenKey || "token");
+      const { cookies } = useCookies();
 
       // Bersihkan state store
       this.loggedIn = false;
@@ -82,7 +81,7 @@ export const useAuthStore = defineStore({
       this.permissions = [];
 
       // Bersihkan Cookie dan LocalStorage
-      tokenCookie.value = null;
+      cookies.remove(config.public.tokenKey || "token");
       localStorage.clear();
 
       // Redirect ke halaman login
@@ -99,25 +98,22 @@ export const useAuthStore = defineStore({
           },
         });
 
-        const data = response?.data || response || [];
+        let data = response?.data;
+        if (!data || !Array.isArray(data)) {
+          data = []; 
+        }
+        
         this.menus = data;
 
-        if (Array.isArray(data)) {
+        if (data.length > 0) {
           data.forEach((el: any) => {
-            // Ambil permission dari menu utama
             if (el.permissionList) {
-              el.permissionList.forEach((els: any) => {
-                permissions.push(els);
-              });
+              el.permissionList.forEach((els: any) => permissions.push(els));
             }
-
-            // Ambil permission dari sub-menu (children)
             if (el.children) {
               el.children.forEach((el2: any) => {
                 if (el2.permissionList) {
-                  el2.permissionList.forEach((els2: any) => {
-                    permissions.push(els2);
-                  });
+                  el2.permissionList.forEach((els2: any) => permissions.push(els2));
                 }
               });
             }
@@ -127,6 +123,7 @@ export const useAuthStore = defineStore({
         this.permissions = permissions;
       } catch (err) {
         console.error("Gagal load menu dinamis", err);
+        this.menus = [];
       }
     },
 

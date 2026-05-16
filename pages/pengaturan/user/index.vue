@@ -93,7 +93,6 @@
       </p>
     </DialogForm>
   </div>
-    <!-- Lookup Pegawai -->
     <LookupPegawai
       ref="lookupPegawai"
       :persistent="true"
@@ -104,6 +103,7 @@
 import Swal from "sweetalert2";
 import userService from "@/services/user.service";
 import roleService from "@/services/role.service";
+import { useToast } from "@/composables/useToast"; // Pastikan import toast ada
 
 definePageMeta({
   layout: "admin",
@@ -217,7 +217,7 @@ async function loadAll() {
   isLoading.value = true;
   await userService()
     .retrieve({
-      q: q,
+      q: q || "",
       pageSize: pageSize ? pageSize : itemPerPage.value,
       pageNumber: pageNumber ? pageNumber : 1,
       sortBy: sortBy,
@@ -228,9 +228,9 @@ async function loadAll() {
       isLoading.value = false;
       tableData.value = {
         items: res.data != null ? res.data.items : [],
-        meta: res.data.meta,
+        meta: res.data != null ? res.data.meta : { totalItems: 0 },
       };
-    });
+    }).catch(() => { isLoading.value = false });
 }
 
 function handleSave() {
@@ -285,7 +285,7 @@ async function deleteItem(x: any) {
     if (result.isConfirmed) {
       userService()
         .destroy(x.id)
-        .then((response) => {
+        .then((response: any) => {
           if (response.data) {
             useToast("success", "Data Berhasil Dihapus");
             loadAll();
