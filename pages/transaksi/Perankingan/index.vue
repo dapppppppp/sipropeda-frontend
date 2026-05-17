@@ -21,14 +21,14 @@
           </v-col>
           <v-col cols="12" md="4">
             <v-label class="mb-2 font-weight-bold">Tahap / Versi</v-label>
-            <v-autocomplete
-              v-model="selectedTahap"
-              :items="['RKP', 'RAPBDes']"
-              color="primary"
-              variant="outlined"
-              density="compact"
-              hide-details
-            ></v-autocomplete>
+          <v-autocomplete
+            v-model="selectedTahap"
+            :items="['RKP', 'RAPBDes']"
+            color="primary"
+            variant="outlined"
+            density="compact"
+            hide-details
+          ></v-autocomplete>
           </v-col>
           <v-col cols="12" md="4" class="text-right mt-6">
             <v-btn 
@@ -77,7 +77,6 @@
 
   </div>
 </template>
-
 <script setup lang="ts">
 import Swal from "sweetalert2";
 import perankinganService from "@/services/perankingan.service";
@@ -101,8 +100,7 @@ const hasSearched = ref(false);
 const currentYear = new Date().getFullYear();
 const listTahun = ref([currentYear - 1, currentYear, currentYear + 1]);
 const selectedTahun = ref(currentYear);
-const selectedTahap = ref('RKP'); // Default
-
+const selectedTahap = ref('RKP');
 const tableData = ref<any[]>([]);
 
 const headers = ref([
@@ -112,15 +110,16 @@ const headers = ref([
   { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center" },
 ]);
 
-const { checkPermission } = usePermission();
+// --- PERBAIKAN ERROR 1: Mengambil `hasPermission` untuk mengecek UI ---
+const { checkPermission, hasPermission: checkUI } = usePermission();
 
 function hasPermission(val: string) {
   const tag = `PERANKINGAN.${val}`;
-  return checkPermission(tag);
+  return checkUI(tag); // Mengecek boolean (true/false) untuk tombol
 }
 
 onBeforeMount(() => {
-  checkPermission("PERANKINGAN.VIEW");
+  checkPermission("PERANKINGAN.VIEW"); // Mengecek rute saat halaman dimuat
 });
 
 onMounted(() => {
@@ -133,7 +132,9 @@ async function loadHasil() {
   hasSearched.value = true;
   tableData.value = [];
   try {
-    const res: any = await perankinganService().retrieveArsip(selectedTahun.value, selectedTahap.value);
+    // --- PERBAIKAN ERROR 2: Memanggil getArsip() dan menyesuaikan parameternya ---
+    const req = { tahun: selectedTahun.value, tahap: selectedTahap.value };
+    const res: any = await perankinganService().getArsip(req);
     tableData.value = res.data || [];
   } catch (err) {
     console.error("Gagal load hasil perankingan", err);
@@ -162,7 +163,8 @@ function hitungTopsis() {
           tahunAnggaran: selectedTahun.value,
           tahapVersi: selectedTahap.value
         };
-        const res: any = await perankinganService().hitung(payload);
+        // --- PERBAIKAN ERROR 3: Memanggil hitungTopsis() ---
+        const res: any = await perankinganService().hitungTopsis(payload);
         
         useToast("success", "Perhitungan TOPSIS Selesai!");
         
@@ -178,9 +180,3 @@ function hitungTopsis() {
   });
 }
 </script>
-
-<style scoped>
-.border-top-primary {
-  border-top: 4px solid #1e88e5; /* Sesuaikan dengan warna primary vuetify Anda */
-}
-</style>
