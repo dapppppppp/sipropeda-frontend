@@ -5,18 +5,18 @@
       :breadcrumbs="breadcrumbs"
     ></SharedUiBreadcrumb>
 
-    <TableListKriteria
+    <TableListSumberDana
       :headers="headers"
       :tableData="filteredData"
       :loading="isLoading"
-      title="Data Kriteria TOPSIS"
-      permission="KRITERIA"
+      title="Data Sumber Dana"
+      permission="SUMBER_DANA"
       @fetchData="loadAll"
       @addItem="addItem"
       @editItem="editItem"
       @deleteItem="deleteItem"
     >
-    </TableListKriteria>
+    </TableListSumberDana>
 
     <DialogForm
       :show="dialog"
@@ -27,85 +27,46 @@
       @handleSave="handleSave"
       @handleClose="handleClose"
     >
-      <v-label class="mb-2 font-weight-medium">Kode Kriteria</v-label>
+      <v-label class="mb-2 font-weight-medium">Nama Sumber Dana</v-label>
       <v-text-field
-        v-model="editedItem.kode"
+        v-model="editedItem.namaSumber"
         density="compact"
-        :rules="[(v: any) => !!v || 'Wajib diisi']"
-        placeholder="Contoh: C1"
+        :rules="[(v) => !!v || 'Wajib diisi']"
+        placeholder="Contoh: Dana Desa (DD)"
         hide-details="auto"
       ></v-text-field>
-
-      <v-label class="mb-2 mt-3 font-weight-medium">Nama Kriteria</v-label>
-      <v-text-field
-        v-model="editedItem.nama"
-        density="compact"
-        :rules="[(v: any) => !!v || 'Wajib diisi']"
-        placeholder="Contoh: Kondisi Jalan"
-        hide-details="auto"
-      ></v-text-field>
-
-      <v-row class="mt-1">
-        <v-col cols="12" md="6">
-          <v-label class="mb-2 font-weight-medium">Bobot</v-label>
-          <v-text-field
-            v-model.number="editedItem.bobot"
-            type="number"
-            density="compact"
-            :rules="[(v: any) => !!v || 'Wajib diisi']"
-            placeholder="Contoh: 5"
-            hide-details="auto"
-          ></v-text-field>
-        </v-col>
-        <v-col cols="12" md="6">
-          <v-label class="mb-2 font-weight-medium">Jenis Kriteria</v-label>
-          <v-autocomplete
-            v-model="editedItem.jenis"
-            :items="['benefit', 'cost']"
-            color="primary"
-            variant="outlined"
-            density="compact"
-            :rules="[(v: any) => !!v || 'Wajib diisi']"
-            placeholder="Pilih Jenis"
-            hide-details="auto"
-          ></v-autocomplete>
-        </v-col>
-      </v-row>
     </DialogForm>
   </div>
 </template>
 
 <script setup lang="ts">
 import Swal from "sweetalert2";
-import kriteriaService from "@/services/kriteria.service";
+import sumberDanaService from "@/services/sumber_dana.service";
 
 definePageMeta({
   layout: "admin",
   middleware: ["auth"],
 });
 
-const pages = ref({ title: "Master Kriteria" });
+const pages = ref({ title: "Master Sumber Dana" });
 const breadcrumbs = ref([
   { text: "Dashboard", disabled: false, href: "/dashboard" },
   { text: "Master Data", disabled: true, href: "#" },
-  { text: "Kriteria", disabled: true, href: "#" },
+  { text: "Sumber Dana", disabled: true, href: "#" },
 ]);
 
 const isLoading = ref(false);
 const isLoadingSave = ref(false);
 const dialog = ref(false);
 const resetDialog = ref(true);
-const dialogTitle = ref("Tambah Kriteria");
+const dialogTitle = ref("Tambah Sumber Dana");
 
 const tableData = ref<any[]>([]);
 const filteredData = ref<any[]>([]);
 
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
-  { title: "Kode", key: "kode", width: "10%" },
-  { title: "Nama Kriteria", key: "nama" },
-  { title: "Bobot", key: "bobot", width: "15%", align: "center" },
-  { title: "Jenis", key: "jenis", width: "15%", align: "center" },
+  { title: "Nama Sumber Dana", key: "namaSumber" },
   { title: "Aksi", key: "actions", align: "center", width: "15%", sortable: false },
 ]);
 
@@ -113,20 +74,18 @@ const editedItem = ref<any>({});
 const { checkPermission } = usePermission();
 
 onBeforeMount(() => {
-  checkPermission("KRITERIA.VIEW");
+  checkPermission("SUMBER_DANA.VIEW");
 });
 
 async function loadAll(searchQuery = "") {
   isLoading.value = true;
   try {
-    const res: any = await kriteriaService().retrieve();
+    const res: any = await sumberDanaService().retrieve();
     tableData.value = res.data || [];
     
-    // Simple frontend search filter
     if (searchQuery) {
       filteredData.value = tableData.value.filter((item: any) => 
-        item.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        item.kode.toLowerCase().includes(searchQuery.toLowerCase())
+        item.namaSumber.toLowerCase().includes(searchQuery.toLowerCase())
       );
     } else {
       filteredData.value = tableData.value;
@@ -140,7 +99,7 @@ async function loadAll(searchQuery = "") {
 
 function handleSave() {
   isLoadingSave.value = true;
-  kriteriaService()
+  sumberDanaService()
     .save(editedItem.value)
     .then(() => {
       handleClose();
@@ -154,18 +113,18 @@ function handleSave() {
 
 function addItem() {
   resetDialog.value = false;
-  editedItem.value = { bobot: 0, jenis: 'benefit' };
-  dialogTitle.value = "Tambah Kriteria";
+  editedItem.value = {};
+  dialogTitle.value = "Tambah Sumber Dana";
   dialog.value = true;
 }
 
 async function editItem(x: any) {
   resetDialog.value = false;
   try {
-    const res: any = await kriteriaService().retrieveById(x.id);
+    const res: any = await sumberDanaService().retrieveById(x.id);
     if (res.data.id) {
       editedItem.value = res.data;
-      dialogTitle.value = "Edit Kriteria";
+      dialogTitle.value = "Edit Sumber Dana";
       dialog.value = true;
     }
   } catch (err) {
@@ -176,7 +135,7 @@ async function editItem(x: any) {
 async function deleteItem(x: any) {
   Swal.fire({
     title: "Hapus Data",
-    text: `Apakah Anda yakin menghapus kriteria [${x.kode} - ${x.nama}]?`,
+    text: `Apakah Anda yakin menghapus [${x.namaSumber}]?`,
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#d33",
@@ -186,7 +145,7 @@ async function deleteItem(x: any) {
     allowOutsideClick: false,
   }).then((result: any) => {
     if (result.isConfirmed) {
-      kriteriaService()
+      sumberDanaService()
         .destroy(x.id)
         .then(() => {
           useToast("success", "Data Berhasil Dihapus");
