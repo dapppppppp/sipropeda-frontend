@@ -48,13 +48,10 @@
       <v-label class="mb-2 mt-2 font-weight-medium">Nama</v-label>
       <v-text-field
         v-model="editedItem.name"
-        append-inner-icon="mdi-account-search"
         density="compact"
-        :readonly="editedItem.idPegawai ? true : false"
-        @click:append-inner="handleLookup"
         :rules="[(v) => !!v || 'Wajib diisi']"
         hide-details="auto"
-        placeholder="Nama"
+        placeholder="Nama Lengkap"
         clearable
       >
       </v-text-field>
@@ -88,22 +85,27 @@
         @click:append-inner="showPassword = !showPassword"
         hide-details="auto"
       ></v-text-field>
+      <v-text-field
+        v-model="editedItem.password"
+        density="compact"
+        :rules="!editedItem.id ? passwordRules : []"
+        placeholder="Password"
+        :type="showPassword ? 'text' : 'password'"
+        :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+        @click:append-inner="showPassword = !showPassword"
+        hide-details="auto"
+      ></v-text-field>
       <p v-if="editedItem.id" style="font-size: 12px" class="mb-0 mt-2">
         *Kosongkan password, jika tidak ingin merubah password.
       </p>
     </DialogForm>
   </div>
-    <LookupPegawai
-      ref="lookupPegawai"
-      :persistent="true"
-      @selected="selectedItem"
-    ></LookupPegawai>
 </template>
+
 <script setup lang="ts">
 import Swal from "sweetalert2";
 import userService from "@/services/user.service";
 import roleService from "@/services/role.service";
-import { useToast } from "@/composables/useToast"; // Pastikan import toast ada
 
 definePageMeta({
   layout: "admin",
@@ -175,7 +177,6 @@ const headers = ref([
   },
 ]);
 const editedItem: any = ref({});
-const lookupPegawai: any = ref(null);
 const { checkPermission } = usePermission();
 
 const authStore = useAuthStore();
@@ -200,18 +201,6 @@ function loadAllRole() {
     });
 }
 
-function handleLookup(val: any) {
-  lookupPegawai.value.loadData();
-}
-
-function selectedItem(v: any) {
-  editedItem.value.idPegawai = v.id;
-  editedItem.value.name = v.nama;
-  editedItem.value.username = v.nama.toLowerCase();
-  editedItem.value.email = v.email;
-}
-
-
 async function loadAll() {
   const { pageNumber, pageSize, q, sortBy, sortType, idRole} = route.query;
   isLoading.value = true;
@@ -230,7 +219,7 @@ async function loadAll() {
         items: res.data != null ? res.data.items : [],
         meta: res.data != null ? res.data.meta : { totalItems: 0 },
       };
-    }).catch(() => { isLoading.value = false });
+    }).catch(() => { isLoading.value = false; });
 }
 
 function handleSave() {
@@ -285,7 +274,7 @@ async function deleteItem(x: any) {
     if (result.isConfirmed) {
       userService()
         .destroy(x.id)
-        .then((response: any) => {
+        .then((response) => {
           if (response.data) {
             useToast("success", "Data Berhasil Dihapus");
             loadAll();
@@ -301,6 +290,8 @@ function handleClose() {
   editedItem.value = {};
   dialog.value = false;
 }
+
+// Menghapus fungsi lookup yang tidak digunakan agar bersih dari error compile
 
 function resetPassword(item: any): void {
   const reset = {

@@ -53,6 +53,14 @@ const userService = () => {
     });
   }
 
+  // Menambahkan fungsi reset password yang kurang
+  async function resetPassword(req: any) {
+    return useAPIs(`${url}/reset-password`, {
+      method: "PUT",
+      body: req,
+    });
+  }
+
   return {
     login,
     retrieve,
@@ -61,6 +69,7 @@ const userService = () => {
     create,
     update,
     destroy,
+    resetPassword,
   };
 };
 
