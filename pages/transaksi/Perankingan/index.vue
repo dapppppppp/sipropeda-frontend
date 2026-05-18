@@ -63,8 +63,11 @@
       :tableData="tableData"
       :loading="isLoading"
       :title="`Hasil Perankingan Tahun ${selectedTahun} - Tahap ${selectedTahap}`"
+      @promosikan="handlePromosi"
+
     >
     </TableListPerankingan>
+    
 
     <v-alert
       v-else-if="!isLoading && hasSearched"
@@ -80,6 +83,7 @@
 <script setup lang="ts">
 import Swal from "sweetalert2";
 import perankinganService from "@/services/perankingan.service";
+import usulanProyekService from "@/services/usulan_proyek.service"; // Tambahan service
 
 definePageMeta({
   layout: "admin",
@@ -101,38 +105,45 @@ const currentYear = new Date().getFullYear();
 const listTahun = ref([currentYear - 1, currentYear, currentYear + 1]);
 const selectedTahun = ref(currentYear);
 const selectedTahap = ref('RKP');
+
 const tableData = ref<any[]>([]);
 
-const headers = ref([
-  { title: "Peringkat", key: "ranking", width: "10%", align: "center" },
-  { title: "Nama Usulan Proyek", key: "usulanName" },
-  { title: "Tahap", key: "tahapVersi", align: "center" },
-  { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center" },
-]);
+// Jadikan headers menggunakan 'computed' agar kolom aksi hanya muncul saat di tahap RKP
+const headers = computed(() => {
+  let baseHeaders = [
+    { title: "Peringkat", key: "ranking", width: "10%", align: "center" },
+    { title: "Nama Usulan Proyek", key: "usulanName" },
+    { title: "Tahap", key: "tahapVersi", align: "center" },
+    { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center" },
+  ];
 
-// --- PERBAIKAN ERROR 1: Mengambil `hasPermission` untuk mengecek UI ---
+  if (selectedTahap.value === 'RKP') {
+    baseHeaders.push({ title: "Aksi", key: "actions", align: "center", width: "15%", sortable: false });
+  }
+  
+  return baseHeaders;
+});
+
 const { checkPermission, hasPermission: checkUI } = usePermission();
 
 function hasPermission(val: string) {
   const tag = `PERANKINGAN.${val}`;
-  return checkUI(tag); // Mengecek boolean (true/false) untuk tombol
+  return checkUI(tag);
 }
 
 onBeforeMount(() => {
-  checkPermission("PERANKINGAN.VIEW"); // Mengecek rute saat halaman dimuat
+  checkPermission("PERANKINGAN.VIEW");
 });
 
 onMounted(() => {
-  loadHasil(); // Otomatis load hasil tahun dan tahap saat ini ketika halaman dibuka
+  loadHasil();
 });
 
-// Mengambil arsip hasil perankingan dari DB
 async function loadHasil() {
   isLoading.value = true;
   hasSearched.value = true;
   tableData.value = [];
   try {
-    // --- PERBAIKAN ERROR 2: Memanggil getArsip() dan menyesuaikan parameternya ---
     const req = { tahun: selectedTahun.value, tahap: selectedTahap.value };
     const res: any = await perankinganService().getArsip(req);
     tableData.value = res.data || [];
@@ -143,7 +154,6 @@ async function loadHasil() {
   }
 }
 
-// Menjalankan kalkulasi algoritma TOPSIS
 function hitungTopsis() {
   Swal.fire({
     title: "Mulai Perhitungan?",
@@ -163,18 +173,53 @@ function hitungTopsis() {
           tahunAnggaran: selectedTahun.value,
           tahapVersi: selectedTahap.value
         };
-        // --- PERBAIKAN ERROR 3: Memanggil hitungTopsis() ---
         const res: any = await perankinganService().hitungTopsis(payload);
-        
         useToast("success", "Perhitungan TOPSIS Selesai!");
-        
-        // Load ulang tabel hasil setelah kalkulasi sukses
         loadHasil();
       } catch (err: any) {
-        // Menangkap error dari backend (misal: "data kriteria tidak ditemukan")
         Swal.fire("Gagal", err.response?.data?.error || "Terjadi kesalahan saat menghitung", "error");
       } finally {
         isCalculating.value = false;
+      }
+    }
+  });
+}
+
+// FUNGSI BARU: Promosikan ke RAPBDes
+async function handlePromosi(item: any) {
+  Swal.fire({
+    title: "Promosikan Usulan?",
+    text: `Anda akan memindahkan [${item.usulanName}] ke tahap RAPBDes. Lanjutkan?`,
+    icon: "info",
+    showCancelButton: true,
+    confirmButtonColor: "#1e88e5",
+    cancelButtonColor: "#95a5a6",
+    confirmButtonText: "Ya, Promosikan!",
+    cancelButtonText: "Batal",
+    allowOutsideClick: false,
+  }).then(async (result: any) => {
+    if (result.isConfirmed) {
+      isLoading.value = true;
+      try {
+        // 1. Tarik data usulan proyek aslinya
+        const resUsulan: any = await usulanProyekService().retrieveById(item.usulanId);
+        let usulanData = resUsulan.data;
+
+        // 2. Ubah statusnya menjadi RAPBDes
+        usulanData.statusTahapan = 'RAPBDes';
+
+        // 3. Simpan kembali ke database
+        await usulanProyekService().save(usulanData);
+        
+        Swal.fire("Berhasil", "Usulan berhasil dipromosikan ke RAPBDes", "success");
+        // Hapus sementara dari list frontend agar tidak bisa dipencet 2x
+        tableData.value = tableData.value.filter(u => u.id !== item.id);
+        
+      } catch (err) {
+        console.error("Gagal mempromosikan usulan", err);
+        Swal.fire("Gagal", "Terjadi kesalahan sistem saat mempromosikan", "error");
+      } finally {
+        isLoading.value = false;
       }
     }
   });

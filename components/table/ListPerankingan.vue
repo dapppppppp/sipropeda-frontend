@@ -27,6 +27,21 @@
         <template v-slot:[`item.nilaiPreferensiV`]="{ item }">
           <span class="font-weight-bold">{{ Number(item.nilaiPreferensiV).toFixed(4) }}</span>
         </template>
+
+        <template v-slot:[`item.actions`]="{ item }">
+          <v-btn
+            v-if="item.tahapVersi === 'RKP'"
+            color="success"
+            size="small"
+            variant="tonal"
+            prepend-icon="mdi-check-decagram"
+            @click="$emit('promosikan', item)"
+          >
+            Promosikan
+            <v-tooltip activator="parent" location="bottom">Loloskan ke RAPBDes</v-tooltip>
+          </v-btn>
+        </template>
+
       </v-data-table>
     </v-card-text>
   </v-card>
