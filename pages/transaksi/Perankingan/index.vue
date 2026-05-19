@@ -19,17 +19,6 @@
               hide-details
             ></v-autocomplete>
           </v-col>
-          <v-col cols="12" md="4">
-            <v-label class="mb-2 font-weight-bold">Tahap / Versi</v-label>
-          <v-autocomplete
-            v-model="selectedTahap"
-            :items="['RKP', 'RAPBDes']"
-            color="primary"
-            variant="outlined"
-            density="compact"
-            hide-details
-          ></v-autocomplete>
-          </v-col>
           <v-col cols="12" md="4" class="text-right mt-6">
             <v-btn 
               color="success" 
@@ -116,11 +105,6 @@ const headers = computed(() => {
     { title: "Tahap", key: "tahapVersi", align: "center" },
     { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center" },
   ];
-
-  if (selectedTahap.value === 'RKP') {
-    baseHeaders.push({ title: "Aksi", key: "actions", align: "center", width: "15%", sortable: false });
-  }
-  
   return baseHeaders;
 });
 

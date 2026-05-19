@@ -4,15 +4,15 @@ import { computed } from 'vue';
 import * as TablerIcons from 'vue-tabler-icons';
 
 const props = defineProps({ 
-  item: Object, 
+  item: String, // <-- UBAH JADI STRING (Karena yang diterima adalah teks nama icon-nya)
   level: Number 
 });
 
 // Fungsi untuk mengonversi string nama icon dari database menjadi Komponen Vue aktual
 const IconComponent = computed(() => {
-  // Jika item.icon ada nilainya dan namanya cocok dengan yang ada di library, render icon tersebut.
-  // Jika tidak ditemukan, render 'PointIcon' atau 'CircleIcon' sebagai default.
-  return TablerIcons[props.item?.icon] || TablerIcons['PointIcon'];
+  // Hapus .icon di sini, langsung baca props.item
+  // Jika props.item ada di library, render. Jika tidak, render 'PointIcon'
+  return TablerIcons[props.item] || TablerIcons['PointIcon'];
 });
 </script>
 
