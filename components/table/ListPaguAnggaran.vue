@@ -52,8 +52,12 @@
           {{ index + 1 }}.
         </template>
         
-        <template v-slot:[`item.jumlahPagu`]="{ item }">
-          <span class="font-weight-bold text-success">{{ formatRupiah(item.jumlahPagu) }}</span>
+        <template v-slot:[`item.paguEstimasi`]="{ item }">
+          <span class="font-weight-bold text-success">{{ formatRupiah(item.paguEstimasi) }}</span>
+        </template>
+
+        <template v-slot:[`item.paguDefinitif`]="{ item }">
+          <span class="font-weight-bold text-primary">{{ formatRupiah(item.paguDefinitif) }}</span>
         </template>
 
         <template v-slot:[`item.actions`]="{ item }">

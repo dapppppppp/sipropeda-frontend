@@ -9,7 +9,7 @@
       :headers="headers"
       :tableData="filteredData"
       :loading="isLoading"
-      title="Data Usulan Proyek"
+      title="Data Usulan Proyek (Draft RKP)"
       permission="USULAN_PROYEK"
       @fetchData="loadAll"
       @addItem="addItem"
@@ -86,8 +86,8 @@
             color="primary"
             variant="outlined"
             density="compact"
-            clearable
-            placeholder="Pilih Sumber Dana (Opsional)"
+            :rules="[(v) => !!v || 'Wajib diisi']"
+            placeholder="Pilih Sumber Dana"
             hide-details="auto"
           ></v-autocomplete>
         </v-col>
@@ -114,6 +114,8 @@
 import Swal from "sweetalert2";
 import usulanProyekService from "@/services/usulan_proyek.service";
 import sumberDanaService from "@/services/sumber_dana.service";
+import { useToast } from "@/composables/useToast"; // Pastikan auto-import atau manual import jika error
+import { usePermission } from "@/composables/usePermission";
 
 definePageMeta({
   layout: "admin",
@@ -140,11 +142,12 @@ const listSumberDana = ref<any[]>([]);
 const currentYear = new Date().getFullYear();
 const listTahun = ref([currentYear - 1, currentYear, currentYear + 1, currentYear + 2]);
 
+// 👇 PERUBAHAN: Menambahkan "Sumber Dana" ke header tabel agar rapi
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
   { title: "Tahun", key: "tahunAnggaran", width: "10%", align: "center" },
   { title: "Nama Kegiatan/Proyek", key: "namaProyek" },
-  { title: "Lokasi/Sasaran", key: "lokasi" },
+  { title: "Sumber Dana", key: "sumberDanaName" }, 
   { title: "Sifat", key: "statusSifat", align: "center" },
   { title: "Nilai RAB", key: "nilaiRab", align: "right" },
   { title: "Aksi", key: "actions", align: "center", width: "12%", sortable: false },
@@ -209,8 +212,9 @@ function handleSave() {
 
 function addItem() {
   resetDialog.value = false;
+  // 👇 PERUBAHAN: Default Tahun dibuat +1 (Tahun Depan) sesuai siklus RKP
   editedItem.value = { 
-    tahunAnggaran: currentYear,
+    tahunAnggaran: currentYear + 1,
     statusSifat: 'Reguler'
   };
   dialogTitle.value = "Tambah Usulan Proyek";
