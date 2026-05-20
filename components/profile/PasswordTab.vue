@@ -130,9 +130,9 @@ async function handleChangePassword() {
 
   isLoadingChangePassword.value = true;
   try {
-    await userService().changePassword({
-      id: userData.value.id,
-      oldPassword: passwordForm.value.oldPassword,
+    // SESUAIKAN DENGAN GOLANG: Menggunakan fungsi resetPassword dan mengirim id + newPassword
+    await userService().resetPassword({
+      id: userData.value.id || userData.value.ID,
       newPassword: passwordForm.value.newPassword,
     });
 
@@ -154,4 +154,3 @@ function resetForm() {
   formPassword.value?.resetValidation();
 }
 </script>
-

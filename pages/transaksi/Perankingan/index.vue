@@ -104,6 +104,7 @@ const headers = computed(() => {
     { title: "Nama Usulan Proyek", key: "usulanName" },
     { title: "Tahap", key: "tahapVersi", align: "center" },
     { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center" },
+    { title: "Aksi", key: "actions", align: "center", sortable: false }
   ];
   return baseHeaders;
 });
