@@ -17,9 +17,11 @@
               variant="outlined"
               density="compact"
               hide-details
+              @update:modelValue="loadHasil"
             ></v-autocomplete>
           </v-col>
-          <v-col cols="12" md="4" class="text-right mt-6">
+          
+          <v-col cols="12" md="8" class="text-right mt-6">
             <v-btn 
               color="success" 
               size="large" 
@@ -29,17 +31,6 @@
               v-if="hasPermission('CREATE')"
             >
               HITUNG TOPSIS
-            </v-btn>
-            <v-btn 
-              color="primary" 
-              size="large" 
-              variant="outlined"
-              class="ml-2"
-              prepend-icon="mdi-magnify"
-              :loading="isLoading"
-              @click="loadHasil"
-            >
-              TAMPILKAN
             </v-btn>
           </v-col>
         </v-row>
@@ -53,11 +44,9 @@
       :loading="isLoading"
       :title="`Hasil Perankingan Tahun ${selectedTahun} - Tahap ${selectedTahap}`"
       @promosikan="handlePromosi"
-
     >
     </TableListPerankingan>
     
-
     <v-alert
       v-else-if="!isLoading && hasSearched"
       type="info"
@@ -69,10 +58,11 @@
 
   </div>
 </template>
+
 <script setup lang="ts">
 import Swal from "sweetalert2";
 import perankinganService from "@/services/perankingan.service";
-import usulanProyekService from "@/services/usulan_proyek.service"; // Tambahan service
+import usulanProyekService from "@/services/usulan_proyek.service";
 
 definePageMeta({
   layout: "admin",
@@ -91,13 +81,14 @@ const isCalculating = ref(false);
 const hasSearched = ref(false);
 
 const currentYear = new Date().getFullYear();
-const listTahun = ref([currentYear - 1, currentYear, currentYear + 1]);
-const selectedTahun = ref(currentYear);
+// Menyesuaikan list tahun agar sejalan dengan Usulan Proyek (RKP difokuskan untuk tahun depan)
+const listTahun = ref([currentYear, currentYear + 1, currentYear + 2]); 
+const selectedTahun = ref(currentYear + 1); // Default langsung menunjuk tahun depan
 const selectedTahap = ref('RKP');
 
 const tableData = ref<any[]>([]);
 
-// Jadikan headers menggunakan 'computed' agar kolom aksi hanya muncul saat di tahap RKP
+// Jadikan headers menggunakan 'computed'
 const headers = computed(() => {
   let baseHeaders = [
     { title: "Peringkat", key: "ranking", width: "10%", align: "center" },
@@ -121,7 +112,7 @@ onBeforeMount(() => {
 });
 
 onMounted(() => {
-  loadHasil();
+  loadHasil(); // Otomatis load data di tahun default saat halaman dibuka
 });
 
 async function loadHasil() {
@@ -170,7 +161,6 @@ function hitungTopsis() {
   });
 }
 
-// FUNGSI BARU: Promosikan ke RAPBDes
 async function handlePromosi(item: any) {
   Swal.fire({
     title: "Promosikan Usulan?",
@@ -186,18 +176,14 @@ async function handlePromosi(item: any) {
     if (result.isConfirmed) {
       isLoading.value = true;
       try {
-        // 1. Tarik data usulan proyek aslinya
         const resUsulan: any = await usulanProyekService().retrieveById(item.usulanId);
         let usulanData = resUsulan.data;
 
-        // 2. Ubah statusnya menjadi RAPBDes
         usulanData.statusTahapan = 'RAPBDes';
 
-        // 3. Simpan kembali ke database
         await usulanProyekService().save(usulanData);
         
         Swal.fire("Berhasil", "Usulan berhasil dipromosikan ke RAPBDes", "success");
-        // Hapus sementara dari list frontend agar tidak bisa dipencet 2x
         tableData.value = tableData.value.filter(u => u.id !== item.id);
         
       } catch (err) {

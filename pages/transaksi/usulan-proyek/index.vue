@@ -52,6 +52,20 @@
         </v-col>
       </v-row>
 
+      <v-label class="mb-2 mt-3 font-weight-medium">Bidang Pembangunan</v-label>
+<v-autocomplete
+  v-model="editedItem.bidangId"
+  :items="listBidang"
+  item-value="id"
+  item-title="namaBidang"
+  color="primary"
+  variant="outlined"
+  density="compact"
+  :rules="[(v) => !!v || 'Wajib diisi']"
+  placeholder="Pilih Bidang Pembangunan Sesuai Siskeudes"
+  hide-details="auto"
+></v-autocomplete>
+
       <v-label class="mb-2 mt-3 font-weight-medium">Lokasi / Sasaran</v-label>
       <v-textarea
         v-model="editedItem.lokasi"
@@ -116,6 +130,7 @@ import usulanProyekService from "@/services/usulan_proyek.service";
 import sumberDanaService from "@/services/sumber_dana.service";
 import { useToast } from "@/composables/useToast"; // Pastikan auto-import atau manual import jika error
 import { usePermission } from "@/composables/usePermission";
+import bidangPembangunanService from "@/services/bidang_pembangunan.service"; // Import service bidang pembangunan
 
 definePageMeta({
   layout: "admin",
@@ -151,8 +166,28 @@ const headers = ref([
   { title: "Sifat", key: "statusSifat", align: "center" },
   { title: "Nilai RAB", key: "nilaiRab", align: "right" },
   { title: "Aksi", key: "actions", align: "center", width: "12%", sortable: false },
+  { title: "Tahapan", key: "statusTahapan", align: "center", width: "12%" },
+  { title: "Bidang", key: "bidangName" },
 ]);
 
+const listBidang = ref<any[]>([]); // Array penampung data master bidang
+
+// Fungsi untuk menarik data dari service backend
+async function loadMasterBidang() {
+  try {
+    const res: any = await bidangPembangunanService().retrieve();
+    listBidang.value = res.data || [];
+  } catch (err) {
+    console.error("Gagal load bidang pembangunan", err);
+  }
+}
+
+// Dipanggil di dalam onMounted bersama dengan yang lain
+onMounted(() => {
+  loadAll();
+  loadMasterSumberDana();
+  loadMasterBidang(); // <-- Pemanggilan fungsi di sini
+});
 const editedItem = ref<any>({});
 const { checkPermission } = usePermission();
 

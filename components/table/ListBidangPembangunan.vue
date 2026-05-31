@@ -14,7 +14,7 @@
           <v-text-field
             v-model="filter.q"
             density="compact"
-            label="Cari Usulan ( Tekan Enter )"
+            label="Cari Bidang (Tekan Enter)"
             @keyup.enter="handleApplyFilter"
             @click:clear="handleClear"
             hide-details
@@ -50,22 +50,6 @@
       >
         <template v-slot:[`item.no`]="{ index }">
           {{ index + 1 }}.
-        </template>
-        
-        <template v-slot:[`item.statusSifat`]="{ item }">
-          <v-chip :color="item.statusSifat === 'Mandatori' ? 'error' : 'info'" size="small" label>
-            {{ item.statusSifat }}
-          </v-chip>
-        </template>
-
-        <template v-slot:[`item.nilaiRab`]="{ item }">
-          <span class="font-weight-bold text-success">{{ formatRupiah(item.nilaiRab) }}</span>
-        </template>
-
-        <template v-slot:[`item.statusTahapan`]="{ item }">
-          <v-chip :color="getStatusColor(item.statusTahapan)" size="small" label class="font-weight-bold">
-            {{ item.statusTahapan }}
-          </v-chip>
         </template>
 
         <template v-slot:[`item.actions`]="{ item }">
@@ -121,28 +105,6 @@ export default {
       const { hasPermission } = usePermission();
       const tag = `${this.permission}.${val}`;
       return hasPermission(tag);
-    },
-    formatRupiah(value) {
-      if (!value) return "Rp 0";
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0
-      }).format(value);
-    },
-    // 👇 TAMBAHAN: Fungsi penentu warna badge status tahapan 👇
-    getStatusColor(status) {
-      if (!status) return "grey";
-      switch (status.toUpperCase()) {
-        case "RKP":
-          return "warning"; // Jingga / Oranye (Sedang dirancang)
-        case "RAPBDES":
-          return "info";    // Biru (Tahap Sinkronisasi & Seleksi)
-        case "APBDES":
-          return "success"; // Hijau (Sudah disahkan/final)
-        default:
-          return "grey";
-      }
     },
     handleApplyFilter() {
       this.$emit("fetchData", this.filter.q);

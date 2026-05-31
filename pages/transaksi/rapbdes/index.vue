@@ -177,12 +177,16 @@ async function loadData() {
         .filter((u: any) => u.sumberDanaId === pagu.sumberDanaId)
         .reduce((sum: number, u: any) => sum + Number(u.nilaiRab), 0);
       
+      // 👇 PERUBAHAN KRUSIAL DI SINI 👇
+      // Menggunakan paguDefinitif. Jika pagu definitif belum diinput (0), pakai paguEstimasi.
+      const nilaiPagu = Number(pagu.paguDefinitif) > 0 ? Number(pagu.paguDefinitif) : Number(pagu.paguEstimasi);
+      
       return {
         sumberDanaId: pagu.sumberDanaId,
         namaSumber: pagu.sumberDanaName,
-        pagu: Number(pagu.jumlahPagu),
+        pagu: nilaiPagu, // <-- Sekarang menggunakan nilaiPagu yang sudah diseleksi
         terpakai: terpakai,
-        sisa: Number(pagu.jumlahPagu) - terpakai
+        sisa: nilaiPagu - terpakai
       };
     });
 
@@ -214,20 +218,29 @@ async function simpanRevisi() {
 }
 
 async function kembalikanKeRKP(item: any) {
+  const tahunLuncuran = item.tahunAnggaran + 1; // Menghitung tahun luncuran (tahun depan)
+
   Swal.fire({
     title: "Kembalikan ke RKP?",
-    text: `Usulan [${item.namaProyek}] akan ditarik mundur ke tahap RKP.`,
+    text: `Usulan [${item.namaProyek}] akan ditarik mundur ke tahap RKP dan diluncurkan (Carry-over) untuk perencanaan Tahun Anggaran ${tahunLuncuran}.`,
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#d33",
-    confirmButtonText: "Ya, Kembalikan",
+    confirmButtonText: "Ya, Kembalikan & Luncurkan",
     cancelButtonText: "Batal"
   }).then(async (result) => {
     if (result.isConfirmed) {
+      // 1. Ubah status kembali menjadi RKP
       item.statusTahapan = 'RKP';
+      // 2. Tambahkan tahun anggarannya (+1)
+      item.tahunAnggaran = tahunLuncuran; 
+      
+      // 3. Simpan perubahan ke backend
       await usulanProyekService().save(item);
-      useToast("success", "Usulan dikembalikan ke RKP");
-      loadData();
+      useToast("success", `Usulan berhasil diluncurkan ke RKP Tahun ${tahunLuncuran}`);
+      
+      // 4. Refresh data agar usulan tersebut hilang dari layar RAPBDes tahun ini
+      loadData(); 
     }
   });
 }
