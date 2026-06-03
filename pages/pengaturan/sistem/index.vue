@@ -1,30 +1,21 @@
 <template>
   <div>
-    <v-card class="mx-auto" width="800">
-      <v-card-title class="text-center bg-primary"
+    <v-card class="mx-auto" max-width="1100">
+      <v-card-title class="text-center bg-primary py-4"
         >Konfigurasi Sistem
       </v-card-title>
       <v-divider></v-divider>
-      <v-card-text>
+      <v-card-text class="pa-6">
         <v-form ref="form" :disabled="loadSave || loading">
           <v-row>
-            <v-col cols="12">
-              <div class="d-flex align-center">
-                <v-icon class="mr-3" color="#B388FF">mdi-web</v-icon>
-                <h3 class="my-2">Informasi Umum</h3>
+            <v-col cols="12" md="7" class="pr-md-6">
+              <div class="d-flex align-center mb-4">
+                <v-icon class="mr-3" color="#B388FF" size="30">mdi-web</v-icon>
+                <h3 class="mb-0">Informasi Umum</h3>
               </div>
-              <v-divider></v-divider>
+              <v-divider class="mb-4"></v-divider>
 
-              <v-label class="mb-2 mt-6">ID Sistem</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.id"
-                :rules="[(v) => !!v || 'Wajib diisi!']"
-                variant="outlined"
-                density="comfortable"
-                disabled
-              />
-              <v-label class="mb-2 mt-3">Nama Sistem</v-label>
+              <v-label class="mb-2 font-weight-medium">Nama Sistem</v-label>
               <CustomBaseInput
                 type="input"
                 v-model="editedItem.namaSistem"
@@ -32,14 +23,16 @@
                 variant="outlined"
                 density="comfortable"
               />
-              <v-label class="mb-2 mt-3">Tagline</v-label>
+
+              <v-label class="mb-2 mt-3 font-weight-medium">Tagline</v-label>
               <CustomBaseInput
                 type="input"
                 v-model="editedItem.tagline"
                 variant="outlined"
                 density="comfortable"
               />
-              <v-label class="mb-2 mt-3">URL Root</v-label>
+
+              <v-label class="mb-2 mt-3 font-weight-medium">URL Root (Base URL)</v-label>
               <CustomBaseInput
                 type="input"
                 v-model="editedItem.urlRoot"
@@ -47,25 +40,16 @@
                 variant="outlined"
                 density="comfortable"
               />
-              <v-label class="mb-2 mt-3">Status Sistem</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.status"
-                variant="outlined"
-                density="comfortable"
-              />
-            </v-col>
 
-            <v-col cols="12">
-              <div class="d-flex align-center">
-                <v-icon class="mr-3" color="primary"
+              <div class="d-flex align-center mt-6 mb-4">
+                <v-icon class="mr-3" color="primary" size="30"
                   >mdi-office-building-outline</v-icon
                 >
-                <h3 class="my-2">Informasi Instansi</h3>
+                <h3 class="mb-0">Informasi Pemerintah Desa</h3>
               </div>
-              <v-divider></v-divider>
+              <v-divider class="mb-4"></v-divider>
 
-              <v-label class="mb-2 mt-6">Nama Instansi</v-label>
+              <v-label class="mb-2 font-weight-medium">Nama Desa / Instansi</v-label>
               <CustomBaseInput
                 type="input"
                 v-model="editedItem.instansi"
@@ -73,16 +57,8 @@
                 variant="outlined"
                 density="comfortable"
               />
-              <v-label class="mb-2 mt-3">Email Instansi</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.emailInstansi"
-                :rules="emailRules"
-                variant="outlined"
-                density="comfortable"
-              />
 
-              <v-label class="mb-2 mt-3">Jalan</v-label>
+              <v-label class="mb-2 mt-3 font-weight-medium">Alamat Balai Desa</v-label>
               <CustomBaseInput
                 type="textarea"
                 v-model="editedItem.jalan"
@@ -90,9 +66,10 @@
                 density="comfortable"
                 :rows="2"
               />
+
               <v-row>
                 <v-col cols="6">
-                  <v-label class="mb-2 mt-3">Kelurahan</v-label>
+                  <v-label class="mb-2 mt-3 font-weight-medium">Desa / Kelurahan</v-label>
                   <CustomBaseInput
                     type="input"
                     v-model="editedItem.kelurahan"
@@ -101,7 +78,7 @@
                   />
                 </v-col>
                 <v-col cols="6">
-                  <v-label class="mb-2 mt-3">Kecamatan</v-label>
+                  <v-label class="mb-2 mt-3 font-weight-medium">Kecamatan</v-label>
                   <CustomBaseInput
                     type="input"
                     v-model="editedItem.kecamatan"
@@ -110,7 +87,7 @@
                   />
                 </v-col>
                 <v-col cols="6">
-                  <v-label class="mb-2 mt-3">Kabupaten/Kota</v-label>
+                  <v-label class="mb-2 mt-3 font-weight-medium">Kabupaten / Kota</v-label>
                   <CustomBaseInput
                     type="input"
                     v-model="editedItem.kabupaten"
@@ -119,7 +96,7 @@
                   />
                 </v-col>
                 <v-col cols="6">
-                  <v-label class="mb-2 mt-3">Provinsi</v-label>
+                  <v-label class="mb-2 mt-3 font-weight-medium">Provinsi</v-label>
                   <CustomBaseInput
                     type="input"
                     v-model="editedItem.provinsi"
@@ -128,7 +105,7 @@
                   />
                 </v-col>
                 <v-col cols="6">
-                  <v-label class="mb-2 mt-3">Kode Pos</v-label>
+                  <v-label class="mb-2 mt-3 font-weight-medium">Kode Pos</v-label>
                   <CustomBaseInput
                     type="input"
                     v-model="editedItem.kodePos"
@@ -136,126 +113,91 @@
                     density="comfortable"
                   />
                 </v-col>
+                <v-col cols="6">
+                  <v-label class="mb-2 mt-3 font-weight-medium">Telepon</v-label>
+                  <CustomBaseInput
+                    type="input"
+                    v-model="editedItem.telp"
+                    variant="outlined"
+                    density="comfortable"
+                  />
+                </v-col>
               </v-row>
-              <v-label class="mb-2 mt-3">Telepon</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.telp"
-                variant="outlined"
-                density="comfortable"
-              />
-              <v-label class="mb-2 mt-3">Fax</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.fax"
-                variant="outlined"
-                density="comfortable"
-              />
+            </v-col>
 
-              <v-label class="mb-2 mt-3">Logo Sistem</v-label>
+            <v-col cols="12" md="5">
+              <div class="d-flex align-center mb-4">
+                <v-icon class="mr-3" color="info" size="30"
+                  >mdi-image-outline</v-icon
+                >
+                <h3 class="mb-0">Branding & Logo</h3>
+              </div>
+              <v-divider class="mb-4"></v-divider>
+
+              <v-label class="mb-2 mt-3 font-weight-medium">Logo Sistem (SIPROPEDA)</v-label>
               <div
                 @click="uploadLogo('Logo Sistem')"
-                style="width: 140px; height: 140px; border: 1px dashed #aaa"
+                class="d-flex justify-center align-center rounded mb-4"
+                style="width: 100%; height: 180px; border: 2px dashed #aaa; cursor: pointer; background-color: #f9f9f9;"
               >
                 <v-img
-                  :src="`/api/files?path=${editedItem.logo}`"
-                  width="100%"
-                  height="100%"
+                  v-if="editedItem.logo"
+                  :src="getFileUrl(editedItem.logo)"
+                  max-width="150"
+                  max-height="150"
                 ></v-img>
+                <div v-else class="text-center text-grey">
+                  <v-icon size="40">mdi-cloud-upload</v-icon>
+                  <p class="mt-2 mb-0">Klik untuk Upload Logo Sistem</p>
+                </div>
               </div>
 
-              <v-label class="mb-2 mt-3">Logo Instansi</v-label>
+              <v-label class="mb-2 mt-4 font-weight-medium">Logo Instansi (Kabupaten / Desa)</v-label>
               <div
                 @click="uploadLogo('Logo Instansi')"
-                style="width: 140px; height: 140px; border: 1px dashed #aaa"
+                class="d-flex justify-center align-center rounded mb-4"
+                style="width: 100%; height: 180px; border: 2px dashed #aaa; cursor: pointer; background-color: #f9f9f9;"
               >
                 <v-img
-                  :src="`/api/files?path=${editedItem.childLogo}`"
-                  width="100%"
-                  height="100%"
+                  v-if="editedItem.childLogo"
+                  :src="getFileUrl(editedItem.childLogo)"
+                  max-width="150"
+                  max-height="150"
                 ></v-img>
+                <div v-else class="text-center text-grey">
+                  <v-icon size="40">mdi-cloud-upload</v-icon>
+                  <p class="mt-2 mb-0">Klik untuk Upload Logo Desa</p>
+                </div>
               </div>
 
-              <v-label class="mb-2 mt-3">Favicon</v-label>
+              <v-label class="mb-2 mt-4 font-weight-medium">Favicon (Ikon Tab Browser)</v-label>
               <div
                 @click="uploadLogo('Favicon')"
-                style="width: 140px; height: 140px; border: 1px dashed #aaa"
+                class="d-flex justify-center align-center rounded"
+                style="width: 100%; height: 120px; border: 2px dashed #aaa; cursor: pointer; background-color: #f9f9f9;"
               >
                 <v-img
-                  :src="`/api/files?path=${editedItem.favicon}`"
-                  width="100%"
-                  height="100%"
+                  v-if="editedItem.favicon"
+                  :src="getFileUrl(editedItem.favicon)"
+                  max-width="80"
+                  max-height="80"
                 ></v-img>
+                <div v-else class="text-center text-grey">
+                  <v-icon size="30">mdi-cloud-upload</v-icon>
+                  <p class="mt-1 mb-0 text-caption">Klik untuk Upload Favicon</p>
+                </div>
               </div>
-            </v-col>
-
-            <v-col cols="12">
-              <div class="d-flex align-center">
-                <v-icon class="mr-3" color="info">mdi-email-outline</v-icon>
-                <h3 class="my-2">Konfigurasi SMTP</h3>
-              </div>
-              <v-divider></v-divider>
-
-              <v-label class="mb-2 mt-3">Port</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.portSmtp"
-                @keypress="isNumber"
-                :rules="[(v) => !!v || 'Wajib diisi!']"
-                variant="outlined"
-                density="comfortable"
-              />
-              <v-label class="mb-2 mt-3">Email</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.emailSmtp"
-                :rules="emailRules"
-                variant="outlined"
-                density="comfortable"
-              />
-              <v-label class="mb-2 mt-3">Password</v-label>
-              <CustomBaseInput
-                v-model="editedItem.passSmtp"
-                :rules="[(v) => !!v || 'Wajib diisi!']"
-                variant="outlined"
-                density="comfortable"
-                :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                :type="showPassword ? 'text' : 'password'"
-                @click:append-inner="showPassword = !showPassword"
-              />
-            </v-col>
-
-            <v-col cols="12">
-              <div class="d-flex align-center">
-                <v-icon class="mr-3" color="success">mdi-api</v-icon>
-                <h3 class="my-2">Info Lainnya</h3>
-              </div>
-              <v-divider></v-divider>
-
-              <v-label class="mb-2 mt-6">Server API Firebase</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.serverApiFirebase"
-                variant="outlined"
-                density="comfortable"
-              />
-              <v-label class="mb-2 mt-3">Base URL</v-label>
-              <CustomBaseInput
-                type="input"
-                v-model="editedItem.baseUrl"
-                variant="outlined"
-                density="comfortable"
-              />
             </v-col>
           </v-row>
         </v-form>
       </v-card-text>
       <v-divider></v-divider>
-      <v-card-actions class="justify-center">
+      <v-card-actions class="justify-end pa-4">
         <v-btn
           @click="handleCancel"
           variant="tonal"
           :disabled="loadSave || loading"
+          class="mr-2"
           >Batal</v-btn
         >
         <v-btn
@@ -264,7 +206,7 @@
           variant="flat"
           :loading="loadSave"
           :disabled="loadSave || loading"
-          >Simpan</v-btn
+          >Simpan Konfigurasi</v-btn
         >
       </v-card-actions>
     </v-card>
@@ -278,10 +220,10 @@
       @handleSave="handleSaveLogo"
       @handleClose="handleCloseLogo"
     >
-      <v-label class="mt-3 mb-2">{{ dialogTitle }}</v-label>
+      <v-label class="mt-3 mb-2 font-weight-medium">{{ dialogTitle }}</v-label>
       <v-file-input
         v-model="file"
-        accept="image/*"
+        accept="image/png, image/jpeg, image/jpg"
         :placeholder="dialogTitle"
         prepend-icon=""
         variant="outlined"
@@ -297,27 +239,34 @@
 <script setup lang="ts">
 import Swal from "sweetalert2";
 import appConfigService from "@/services/app_config.service";
+import { useToast } from "@/composables/useToast";
+import { usePermission } from "@/composables/usePermission";
+import { useRuntimeConfig } from "#app";
 
 definePageMeta({
   layout: "admin",
   middleware: ["auth"],
 });
 
+const config = useRuntimeConfig();
+
+// Fungsi untuk menggabungkan URL API dengan parameter path dari database
+function getFileUrl(path: string) {
+  if (!path) return "";
+  
+  // Kita tembak langsung ke root /files
+  return `${config.public.apiUrl}/files?path=${path}`;
+}
+
 const editedItem: any = ref({});
 var loading: any = ref(false);
 var loadSave: any = ref(false);
-var showPassword = ref(false);
 var form: any = ref(null);
 
 var dialog = ref(false);
 var dialogTitle = ref("Ubah Logo");
 var loadingLogo = ref(false);
 var file: any = ref(null);
-
-const emailRules = ref([
-  (v: string) => !!v || "Wajib diisi",
-  (v: string) => /.+@.+\..+/.test(v) || "Format email salah",
-]);
 
 const { checkPermission } = usePermission();
 onBeforeMount(() => {
@@ -327,13 +276,6 @@ onBeforeMount(() => {
 onMounted(() => {
   getConfig();
 });
-
-function isNumber(event: any) {
-  const regex = /\d/;
-  if (!regex.test(event.key)) {
-    event.preventDefault();
-  }
-}
 
 function getConfig() {
   loading.value = true;
@@ -360,20 +302,11 @@ async function handleSave() {
   }
 
   loadSave.value = true;
-
   const payload = { ...editedItem.value };
-
-  if (payload.portSmtp !== null && payload.portSmtp !== undefined) {
-    payload.portSmtp = parseInt(payload.portSmtp, 10);
-
-    if (isNaN(payload.portSmtp)) {
-      payload.portSmtp = null;
-    }
-  }
 
   Swal.fire({
     title: "Simpan",
-    text: "Apakah anda yakin ingin menyimapan data ?",
+    text: "Apakah anda yakin ingin menyimpan data ?",
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#d33",

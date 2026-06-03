@@ -161,13 +161,15 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const previewPhoto = ref<string | null>(null);
 const selectedFile = ref<File | null>(null);
 
-function getPhotoUrl(foto: string | null) {
+  function getPhotoUrl(foto: string | null) {
   if (!foto) return null;
+  
+  // Gunakan apiUrl dari runtime config, atau default localhost jika tidak ada
   const baseUrl = config.public.apiUrl || "http://localhost:8080/v1";
-  const normalized = foto.replace(/^[\/\\]+/, "").replace(/\\/g, "/");
-  return `${baseUrl}/files?path=${encodeURIComponent("/" + normalized)}`;
+  
+  // Kembalikan URL yang formatnya sama persis dengan app_config
+  return `${baseUrl}/files?path=${foto}`;
 }
-
 function onImageError() { previewPhoto.value = null; }
 
 const openFilePicker = () => {

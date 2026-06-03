@@ -18,7 +18,12 @@ const userService = () => {
       params: req,
     });
   }
-
+  async function updateFoto(req: FormData) {
+    return useAPIs(`${url}/upload`, {
+      method: "POST",
+      body: req,
+    });
+  }
   async function retrieveById(id: any) {
     return useAPIs(`${url}/${id}`, {
       method: "GET",
@@ -70,6 +75,7 @@ const userService = () => {
     update,
     destroy,
     resetPassword,
+    updateFoto,
   };
 };
 

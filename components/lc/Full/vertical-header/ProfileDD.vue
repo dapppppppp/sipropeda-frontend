@@ -65,11 +65,10 @@ const router = useRouter();
 const config = useRuntimeConfig();
 
 function getPhotoUrl(foto: string | null) {
-  if (!foto) return null;
-  const baseUrl = config.public.apiUrl || "http://localhost:8080/v1";
-  const normalized = foto.replace(/^[\/\\]+/, "").replace(/\\/g, "/");
-  return `${baseUrl}/files?path=${encodeURIComponent("/" + normalized)}`;
-}
+    if (!foto) return null;
+    const baseUrl = config.public.apiUrl || "http://localhost:8080/v1";
+    return `${baseUrl}/files?path=${foto}`;
+  }
 
 const photoUrl = computed(() => getPhotoUrl(dataUser.value?.foto));
 
