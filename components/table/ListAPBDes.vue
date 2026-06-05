@@ -8,7 +8,7 @@
       <div class="show-on-print text-center mb-6">
         <h2 class="text-uppercase">Dokumen APBDes Murni</h2>
         <h3 class="text-uppercase">Tahun Anggaran {{ tahun }}</h3>
-        <p>Pemerintah Desa (Nama Desa Anda)</p>
+        <p>Pemerintah Desa</p>
         <v-divider class="mt-4 border-opacity-100"></v-divider>
         <v-divider class="mt-1 mb-4 border-opacity-100" style="border-width: 2px;"></v-divider>
       </div>
@@ -22,6 +22,7 @@
         hide-default-footer
         :items-per-page="-1"
         :group-by="[{ key: 'sumberDanaName' }]"
+        :sort-by="[{ key: 'nilaiPreferensiV', order: 'desc' }]"
       >
         <template v-slot:group-header="{ item, columns, toggleGroup, isGroupOpen }">
           <tr>
@@ -40,6 +41,12 @@
 
         <template v-slot:[`item.no`]="{ index }">
           {{ index + 1 }}.
+        </template>
+        
+        <template v-slot:[`item.nilaiPreferensiV`]="{ item }">
+          <span class="font-weight-bold">
+            {{ item.nilaiPreferensiV || (item.raw && item.raw.nilaiPreferensiV) ? Number((item.raw ? item.raw.nilaiPreferensiV : item.nilaiPreferensiV)).toFixed(4) : '-' }}
+          </span>
         </template>
 
         <template v-slot:[`item.nilaiRab`]="{ item }">
@@ -70,29 +77,12 @@ export default {
 </script>
 
 <style scoped>
-/* CSS Khusus untuk Cetak (Print) */
-.show-on-print {
-  display: none;
-}
-
+.show-on-print { display: none; }
 @media print {
-  .hide-on-print {
-    display: none !important;
-  }
-  .show-on-print {
-    display: block !important;
-  }
-  .print-card {
-    box-shadow: none !important;
-    border: none !important;
-  }
-  /* Mengatur tabel agar lebih rapi saat diprint */
-  :deep(.v-table) {
-    border: 1px solid #000;
-  }
-  :deep(th), :deep(td) {
-    border: 1px solid #000 !important;
-    color: #000 !important;
-  }
+  .hide-on-print { display: none !important; }
+  .show-on-print { display: block !important; }
+  .print-card { box-shadow: none !important; border: none !important; }
+  :deep(.v-table) { border: 1px solid #000; }
+  :deep(th), :deep(td) { border: 1px solid #000 !important; color: #000 !important; }
 }
 </style>

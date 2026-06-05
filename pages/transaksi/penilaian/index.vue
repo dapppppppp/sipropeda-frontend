@@ -112,7 +112,7 @@ const selectedUsulan = ref<any>(null);
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
   { title: "Tahun", key: "tahunAnggaran", width: "10%", align: "center" },
-  { title: "Nama Proyek", key: "namaProyek" },
+  { title: "Nama Kegiatan", key: "namaProyek" },
   { title: "Lokasi", key: "lokasi" },
   { title: "Aksi", key: "actions", align: "center", width: "12%", sortable: false },
 ]);

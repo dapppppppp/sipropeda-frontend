@@ -9,7 +9,7 @@
       :headers="headers"
       :tableData="filteredData"
       :loading="isLoading"
-      title="Data Master Bidang Pembangunan"
+      title="Data Master Daftar Prioritas Program dan Kegiatan"
       permission="BIDANG_PEMBANGUNAN"
       @fetchData="loadAll"
       @addItem="addItem"

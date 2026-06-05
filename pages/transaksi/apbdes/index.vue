@@ -39,7 +39,7 @@
       :tableData="tableData"
       :loading="isLoading"
       :tahun="selectedTahun"
-      title="Daftar Infrastruktur APBDes"
+      title="Daftar Kegiatan APBDes"
     >
     </TableListAPBDes>
   </div>
@@ -66,10 +66,12 @@ const tableData = ref<any[]>([]);
 
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
-  { title: "Nama Usulan Proyek", key: "namaProyek" },
+  { title: "Nama Usulan Program/Kegiatan", key: "namaProyek" },
   { title: "Lokasi", key: "lokasi" },
   { title: "Sifat", key: "statusSifat", align: "center" },
-  { title: "Alokasi RAB", key: "nilaiRab", align: "right" }
+  { title: "Alokasi RAB", key: "nilaiRab", align: "right" },
+  { title: "Peringkat", key: "ranking", align: "center", sortable: false },
+{ title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center", sortable: true },
 ]);
 
 const { checkPermission } = usePermission();

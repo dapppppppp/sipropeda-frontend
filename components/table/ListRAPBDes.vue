@@ -13,9 +13,16 @@
         item-value="id"
         hide-default-footer
         :items-per-page="-1" 
+        :sort-by="[{ key: 'nilaiPreferensiV', order: 'desc' }]"
       >
         <template v-slot:[`item.no`]="{ index }">
-          {{ index + 1 }}.
+          <span class="font-weight-bold">{{ index + 1 }}.</span>
+        </template>
+        
+        <template v-slot:[`item.nilaiPreferensiV`]="{ item }">
+          <span class="font-weight-bold text-primary">
+            {{ item.nilaiPreferensiV || (item.raw && item.raw.nilaiPreferensiV) ? Number((item.raw ? item.raw.nilaiPreferensiV : item.nilaiPreferensiV)).toFixed(4) : '-' }}
+          </span>
         </template>
         
         <template v-slot:[`item.sumberDanaName`]="{ item }">

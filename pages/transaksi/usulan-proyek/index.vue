@@ -9,7 +9,7 @@
       :headers="headers"
       :tableData="filteredData"
       :loading="isLoading"
-      title="Data Usulan Proyek (Draft RKP)"
+      title="Data Usulan Kegiatan (Draft RKP)"
       permission="USULAN_PROYEK"
       @fetchData="loadAll"
       @addItem="addItem"
@@ -41,7 +41,7 @@
           ></v-autocomplete>
         </v-col>
         <v-col cols="12" md="9">
-          <v-label class="mb-2 font-weight-medium">Nama Proyek / Kegiatan</v-label>
+          <v-label class="mb-2 font-weight-medium">Nama Kegiatan</v-label>
           <v-text-field
             v-model="editedItem.namaProyek"
             density="compact"

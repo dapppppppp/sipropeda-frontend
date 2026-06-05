@@ -129,6 +129,8 @@ const headers = ref([
   { title: "Sumber Dana", key: "sumberDanaName", align: "center" },
   { title: "Nilai RAB", key: "nilaiRab", align: "right" },
   { title: "Aksi", key: "actions", align: "center", width: "15%", sortable: false },
+  { title: "Peringkat", key: "ranking", align: "center", sortable: false },
+  { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center", sortable: true }
 ]);
 
 const { checkPermission } = usePermission();
