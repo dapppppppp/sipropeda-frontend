@@ -1,8 +1,7 @@
 <template>
   <div>
-    <div class="hide-on-print">
+    <div>
       <SharedUiBreadcrumb :title="pages.title" :breadcrumbs="breadcrumbs"></SharedUiBreadcrumb>
-
       <v-card class="mb-4 elevation-3">
         <v-card-text>
           <v-row align="center">
@@ -19,15 +18,22 @@
               ></v-autocomplete>
             </v-col>
             <v-col cols="12" md="8" class="text-right">
+              
               <v-btn 
                 color="primary" 
                 prepend-icon="mdi-printer" 
-                size="large"
-                @click="cetakDokumen"
+                @click="handlePrintPDF"
                 :disabled="tableData.length === 0"
               >
-                Cetak Dokumen (PDF)
+                Cetak Dokumen APBDes
               </v-btn>
+
+              <ExportAPBDES 
+                ref="exportApbdesRef"
+                :data="tableData" 
+                :tahun="selectedTahun" 
+              />
+              
             </v-col>
           </v-row>
         </v-card-text>
@@ -46,7 +52,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onBeforeMount, onMounted } from "vue";
 import usulanProyekService from "@/services/usulan_proyek.service";
+import ExportAPBDES from "@/components/reports/ExportAPBDES.vue";
 
 definePageMeta({ layout: "admin", middleware: ["auth"] });
 
@@ -65,19 +73,20 @@ const isLoading = ref(false);
 const tableData = ref<any[]>([]);
 
 const headers = ref([
-  { title: "No", key: "no", width: "5%", align: "center", sortable: false },
+  { title: "No", key: "nomorUrut", width: "5%", align: "center", sortable: false },
   { title: "Nama Usulan Program/Kegiatan", key: "namaProyek" },
   { title: "Lokasi", key: "lokasi" },
   { title: "Sifat", key: "statusSifat", align: "center" },
   { title: "Alokasi RAB", key: "nilaiRab", align: "right" },
-  { title: "Peringkat", key: "ranking", align: "center", sortable: false },
-{ title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center", sortable: true },
+  // Kolom Peringkat sudah dihapus dari sini
+  { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center", sortable: true },
 ]);
 
 const { checkPermission } = usePermission();
 
+const exportApbdesRef = ref<InstanceType<typeof ExportAPBDES> | null>(null);
+
 onBeforeMount(() => {
-  // Anggap label permission-nya adalah APBDES
   checkPermission("APBDES.VIEW");
 });
 
@@ -90,9 +99,29 @@ async function loadData() {
   try {
     const res: any = await usulanProyekService().retrieve();
     const semuaUsulan = res.data || [];
+    
+    let filteredData = semuaUsulan.filter((u: any) => 
+      u.tahunAnggaran === selectedTahun.value && u.statusTahapan === 'APBDes'
+    );
 
-    // HANYA tarik yang statusnya APBDes dan tahunnya sesuai (UR-F19)
-    tableData.value = semuaUsulan.filter((u: any) => u.tahunAnggaran === selectedTahun.value && u.statusTahapan === 'APBDes');
+    filteredData.sort((a: any, b: any) => {
+      const danaA = a.sumberDanaName || '';
+      const danaB = b.sumberDanaName || '';
+      
+      if (danaA !== danaB) {
+        return danaA.localeCompare(danaB);
+      }
+      
+      const valA = Number(a.nilaiPreferensiV) || 0;
+      const valB = Number(b.nilaiPreferensiV) || 0;
+      return valB - valA;
+    });
+
+    tableData.value = filteredData.map((item: any, index: number) => ({
+      ...item,
+      nomorUrut: index + 1
+    }));
+
   } catch (err) {
     console.error(err);
   } finally {
@@ -100,28 +129,9 @@ async function loadData() {
   }
 }
 
-function cetakDokumen() {
-  // Fungsi ini akan memanggil dialog print bawaan OS/Browser
-  // Yang mana secara otomatis menyediakan opsi "Save as PDF"
-  window.print();
-}
+const handlePrintPDF = () => {
+  if (exportApbdesRef.value) {
+    exportApbdesRef.value.generateReport();
+  }
+};
 </script>
-
-<style scoped>
-/* Sembunyikan elemen kontrol saat diprint */
-@media print {
-  .hide-on-print {
-    display: none !important;
-  }
-  
-  /* Sembunyikan sidebar dan header utama admin panel (Vuetify layout default) */
-  :deep(.v-navigation-drawer), 
-  :deep(.v-app-bar) {
-    display: none !important;
-  }
-  
-  :deep(.v-main) {
-    padding: 0 !important;
-  }
-}
-</style>

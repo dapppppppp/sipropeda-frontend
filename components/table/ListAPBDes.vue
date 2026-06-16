@@ -39,10 +39,6 @@
           </tr>
         </template>
 
-        <template v-slot:[`item.no`]="{ index }">
-          {{ index + 1 }}.
-        </template>
-        
         <template v-slot:[`item.nilaiPreferensiV`]="{ item }">
           <span class="font-weight-bold">
             {{ item.nilaiPreferensiV || (item.raw && item.raw.nilaiPreferensiV) ? Number((item.raw ? item.raw.nilaiPreferensiV : item.nilaiPreferensiV)).toFixed(4) : '-' }}
