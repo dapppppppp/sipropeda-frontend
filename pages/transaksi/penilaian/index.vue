@@ -16,65 +16,65 @@
     >
     </TableListPenilaian>
 
-<DialogForm
-:show="dialog"
-:persistent="true"
-:reset="resetDialog"
-:formTitle="dialogTitle"
-:isLoading="isLoadingSave"
-@handleSave="handleSave"
-@handleClose="handleClose"
->
-<v-alert
-  v-if="listKriteria.length === 0"
-  type="warning"
-  variant="tonal"
-  class="mb-4"
->
-  Belum ada data Kriteria! Silakan isi Master Kriteria terlebih dahulu.
-</v-alert>
+    <DialogForm
+      :show="dialog"
+      :persistent="true"
+      :reset="resetDialog"
+      :formTitle="dialogTitle"
+      :isLoading="isLoadingSave"
+      @handleSave="handleSave"
+      @handleClose="handleClose"
+    >
+      <v-alert
+        v-if="listKriteria.length === 0"
+        type="warning"
+        variant="tonal"
+        class="mb-4"
+      >
+        Belum ada data Kriteria! Silakan isi Master Kriteria terlebih dahulu.
+      </v-alert>
 
-<div v-else>
-  <v-alert
-    type="info"
-    variant="tonal"
-    class="mb-4 text-body-2"
-    icon="mdi-information-outline"
-  >
-    <strong class="text-subtitle-2">Panduan Pengisian Nilai:</strong>
-    <ul class="ml-4 mt-1">
-      <li>Gunakan <strong>Nilai Riil</strong> (misal: Rp 10.000.000, atau 500 Meter) ATAU <strong>Skala Angka</strong> (misal: 1 - 100). Pastikan skalanya konsisten untuk semua usulan!</li>
-      <li><strong><v-icon size="small" color="success">mdi-arrow-up</v-icon> Kriteria BENEFIT:</strong> Semakin <span class="text-success font-weight-bold">besar</span> nilainya, semakin baik (Prioritas naik).</li>
-      <li><strong><v-icon size="small" color="error">mdi-arrow-down</v-icon> Kriteria COST:</strong> Semakin <span class="text-error font-weight-bold">kecil</span> nilainya, semakin baik (Prioritas naik).</li>
-    </ul>
-  </v-alert>
+      <div v-else>
+        <v-alert
+          type="info"
+          variant="tonal"
+          class="mb-4 text-body-2"
+          icon="mdi-information-outline"
+        >
+          <strong class="text-subtitle-2">Panduan Pengisian Nilai:</strong>
+          <ul class="ml-4 mt-1">
+            <li>Gunakan <strong>Nilai Riil</strong> (misal: Rp 10.000.000, atau 500 Meter) ATAU <strong>Skala Angka</strong> (misal: 1 - 100). Pastikan skalanya konsisten untuk semua usulan!</li>
+            <li><strong><v-icon size="small" color="success">mdi-arrow-up</v-icon> Kriteria BENEFIT:</strong> Semakin <span class="text-success font-weight-bold">besar</span> nilainya, semakin baik (Prioritas naik).</li>
+            <li><strong><v-icon size="small" color="error">mdi-arrow-down</v-icon> Kriteria COST:</strong> Semakin <span class="text-error font-weight-bold">kecil</span> nilainya, semakin baik (Prioritas naik).</li>
+          </ul>
+        </v-alert>
 
-  <p class="mb-4 text-subtitle-2 text-medium-emphasis">
-    Silakan masukkan nilai untuk usulan ini:
-  </p>
+        <p class="mb-4 text-subtitle-2 text-medium-emphasis">
+          Silakan masukkan nilai untuk usulan ini:
+        </p>
 
-  <v-row v-for="(kriteria, index) in listKriteria" :key="index" class="mb-1">
-    <v-col cols="12">
-      <v-label class="mb-2 font-weight-medium">
-        {{ kriteria.kode }} - {{ kriteria.nama }} 
-        <v-chip size="x-small" :color="kriteria.jenis === 'benefit' ? 'success' : 'error'" class="ml-2">
-          {{ kriteria.jenis.toUpperCase() }}
-        </v-chip>
-      </v-label>
-      <v-text-field
-        v-model.number="formNilai[kriteria.id]"
-        type="number"
-        density="compact"
-        variant="outlined"
-        :rules="[(v) => v !== null && v !== '' && v >= 0 || 'Wajib diisi angka (Min: 0)']"
-        :placeholder="`Masukkan nilai untuk ${kriteria.nama}`"
-        :hint="kriteria.jenis === 'benefit' ? 'Nilai besar lebih baik' : 'Nilai kecil lebih baik'"
-        persistent-hint
-      ></v-text-field>
-    </v-col>
-  </v-row>
-</div>
-</DialogForm>
+        <v-row v-for="(kriteria, index) in listKriteria" :key="index" class="mb-1">
+          <v-col cols="12">
+            <v-label class="mb-2 font-weight-medium">
+              {{ kriteria.kode }} - {{ kriteria.nama }} 
+              <v-chip size="x-small" :color="kriteria.jenis === 'benefit' ? 'success' : 'error'" class="ml-2">
+                {{ kriteria.jenis.toUpperCase() }}
+              </v-chip>
+            </v-label>
+            <v-text-field
+              v-model.number="formNilai[kriteria.id]"
+              type="number"
+              density="compact"
+              variant="outlined"
+              :rules="[(v) => v !== null && v !== '' && v >= 0 || 'Wajib diisi angka (Min: 0)']"
+              :placeholder="`Masukkan nilai untuk ${kriteria.nama}`"
+              :hint="kriteria.jenis === 'benefit' ? 'Nilai besar lebih baik' : 'Nilai kecil lebih baik'"
+              persistent-hint
+            ></v-text-field>
+          </v-col>
+        </v-row>
+      </div>
+    </DialogForm>
   </div>
 </template>
 
@@ -105,7 +105,6 @@ const tableData = ref<any[]>([]);
 const filteredData = ref<any[]>([]);
 const listKriteria = ref<any[]>([]);
 
-// State untuk menyimpan nilai input dinamis
 const formNilai = ref<any>({});
 const selectedUsulan = ref<any>(null);
 
@@ -114,6 +113,8 @@ const headers = ref([
   { title: "Tahun", key: "tahunAnggaran", width: "10%", align: "center" },
   { title: "Nama Kegiatan", key: "namaProyek" },
   { title: "Lokasi", key: "lokasi" },
+  // SEKARANG MENAMPILKAN KOLOML STATUS
+  { title: "Status", key: "status", align: "center", width: "15%", sortable: false },
   { title: "Aksi", key: "actions", align: "center", width: "12%", sortable: false },
 ]);
 
@@ -140,7 +141,6 @@ async function loadMasterKriteria() {
 async function loadAll(searchQuery = "") {
   isLoading.value = true;
   try {
-    // Menarik data usulan untuk ditampilkan di tabel
     const res: any = await usulanProyekService().retrieve();
     tableData.value = res.data || [];
     
@@ -164,12 +164,9 @@ async function openDialogPenilaian(usulan: any) {
   selectedUsulan.value = usulan;
   dialogTitle.value = `Nilai Usulan: ${usulan.namaProyek}`;
   
-  // Kosongkan form nilai sebelumnya
   formNilai.value = {};
-
   isLoading.value = true;
   try {
-    // Tarik nilai yang sudah ada di database (jika sudah pernah dinilai)
     const res: any = await penilaianService().getByUsulanId(usulan.id);
     if (res && res.data) {
       res.data.forEach((item: any) => {
@@ -187,11 +184,10 @@ async function openDialogPenilaian(usulan: any) {
 function handleSave() {
   isLoadingSave.value = true;
 
-  // Susun data sesuai RequestBulkPenilaian di Golang
   const dataPenilaian = listKriteria.value.map((k) => {
     return {
       kriteriaId: k.id,
-      nilaiInput: Number(formNilai.value[k.id]) || 0 // Default 0 jika kosong
+      nilaiInput: Number(formNilai.value[k.id]) || 0
     };
   });
 
@@ -204,6 +200,7 @@ function handleSave() {
     .saveBulk(payload)
     .then(() => {
       handleClose();
+      loadAll(); // MEMPERBARUI LIST SECARA DINAMIS SETELAH SAVE SKSES
       useToast("success", "Penilaian Berhasil Disimpan");
     })
     .catch(() => {

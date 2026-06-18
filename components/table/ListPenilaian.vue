@@ -46,18 +46,36 @@
           {{ index + 1 }}.
         </template>
 
+        <template v-slot:[`item.status`]="{ item }">
+          <v-chip
+            size="small"
+            :color="item.sudahDinilai ? 'success' : 'warning'"
+            :variant="item.sudahDinilai ? 'flat' : 'tonal'"
+            class="font-weight-bold"
+          >
+            <v-icon start size="small">
+              {{ item.sudahDinilai ? 'mdi-check-circle' : 'mdi-clock-alert-outline' }}
+            </v-icon>
+            {{ item.sudahDinilai ? 'Sudah Dinilai' : 'Belum Dinilai' }}
+          </v-chip>
+        </template>
+
         <template v-slot:[`item.actions`]="{ item }">
           <v-btn
             v-if="hasPermission('UPDATE')"
             icon
             variant="tonal"
-            color="success"
+            :color="item.sudahDinilai ? 'info' : 'success'"
             size="32"
             class="mr-1"
             @click="handleNilaiItem(item)"
           >
-            <v-icon size="18">mdi-clipboard-check</v-icon>
-            <v-tooltip activator="parent" location="bottom">Beri Nilai</v-tooltip>
+            <v-icon size="18">
+              {{ item.sudahDinilai ? 'mdi-pencil' : 'mdi-clipboard-check' }}
+            </v-icon>
+            <v-tooltip activator="parent" location="bottom">
+              {{ item.sudahDinilai ? 'Edit Nilai' : 'Beri Nilai' }}
+            </v-tooltip>
           </v-btn>
         </template>
       </v-data-table>
