@@ -7,7 +7,7 @@
 
     <TableListSumberDana
       :headers="headers"
-      :tableData="filteredData"
+      :tableData="tableData"
       :loading="isLoading"
       title="Data Sumber Dana"
       permission="SUMBER_DANA"
@@ -31,7 +31,7 @@
       <v-text-field
         v-model="editedItem.namaSumber"
         density="compact"
-        :rules="[(v) => !!v || 'Wajib diisi']"
+        :rules="[(v: any) => !!v || 'Wajib diisi']"
         placeholder="Contoh: Dana Desa (DD)"
         hide-details="auto"
       ></v-text-field>
@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onBeforeMount, onMounted } from "vue";
 import Swal from "sweetalert2";
 import sumberDanaService from "@/services/sumber_dana.service";
 
@@ -61,8 +62,11 @@ const dialog = ref(false);
 const resetDialog = ref(true);
 const dialogTitle = ref("Tambah Sumber Dana");
 
-const tableData = ref<any[]>([]);
-const filteredData = ref<any[]>([]);
+// Menggunakan object format Pagination standar
+const tableData = ref<any>({
+  items: [],
+  meta: { totalItems: 0 },
+});
 
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
@@ -72,26 +76,41 @@ const headers = ref([
 
 const editedItem = ref<any>({});
 const { checkPermission } = usePermission();
+const route = useRoute();
 
 onBeforeMount(() => {
   checkPermission("SUMBER_DANA.VIEW");
 });
 
-async function loadAll(searchQuery = "") {
+onMounted(() => {
+  loadAll();
+});
+
+async function loadAll() {
+  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
   isLoading.value = true;
   try {
-    const res: any = await sumberDanaService().retrieve();
-    tableData.value = res.data || [];
+    // Memanggil retrievePaging khusus melayani tabel data
+    const res: any = await sumberDanaService().retrievePaging({
+      q: q || "",
+      pageSize: pageSize ?? 10,
+      pageNumber: pageNumber ?? 1,
+      sortBy: sortBy || "createdAt",
+      sortType: sortType || "desc",
+    });
     
-    if (searchQuery) {
-      filteredData.value = tableData.value.filter((item: any) => 
-        item.namaSumber.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    } else {
-      filteredData.value = tableData.value;
-    }
+    const payload = res.data?.data || res.data || {};
+    const items = payload.items || (Array.isArray(payload) ? payload : []);
+    const meta = payload.meta || {};
+    const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
+    tableData.value = {
+      items: items,
+      meta: { totalItems: total },
+    };
   } catch (err) {
     console.error(err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
   } finally {
     isLoading.value = false;
   }

@@ -7,7 +7,7 @@
 
     <TableListPaguAnggaran
       :headers="headers"
-      :tableData="filteredData"
+      :tableData="tableData"
       :loading="isLoading"
       title="Data Pagu Anggaran"
       permission="PAGU_ANGGARAN"
@@ -109,8 +109,8 @@ import { ref, watch, onMounted, onBeforeMount } from "vue";
 import Swal from "sweetalert2";
 import paguAnggaranService from "@/services/pagu_anggaran.service";
 import sumberDanaService from "@/services/sumber_dana.service";
-import { useToast } from "@/composables/useToast"; // Pastikan import toast jika dipakai
-import { usePermission } from "@/composables/usePermission"; // Pastikan import permission
+import { useToast } from "@/composables/useToast";
+import { usePermission } from "@/composables/usePermission";
 
 definePageMeta({
   layout: "admin",
@@ -129,17 +129,19 @@ const isLoadingSave = ref(false);
 const dialog = ref(false);
 const resetDialog = ref(true);
 const dialogTitle = ref("Tambah Pagu Anggaran");
-const isAutoFilled = ref(false); // Penanda apakah angka hasil autofill
+const isAutoFilled = ref(false);
 
-const tableData = ref<any[]>([]);
-const filteredData = ref<any[]>([]);
+const tableData = ref<any>({
+  items: [],
+  meta: {
+    totalItems: 0,
+  },
+});
 const listSumberDana = ref<any[]>([]);
 
-// Generate Tahun Dinamis (Tahun ini - 2 sampai Tahun ini + 3)
 const currentYear = new Date().getFullYear();
 const listTahun = ref([currentYear - 1, currentYear, currentYear + 1, currentYear + 2]);
 
-// Mengubah Header Tabel untuk memunculkan 2 Pagu
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
   { title: "Tahun", key: "tahun", width: "10%", align: "center" },
@@ -151,17 +153,16 @@ const headers = ref([
 
 const editedItem = ref<any>({});
 const { checkPermission } = usePermission();
+const route = useRoute();
 
-// ======== LOGIKA AUTO-FILL PAGU ESTIMASI ========
+// Penyesuaian watch mencari prevData dari tableData.value.items
 watch(
   () => [editedItem.value.tahun, editedItem.value.sumberDanaId],
   ([newTahun, newSumberDanaId]) => {
-    // Hanya lakukan auto-fill jika ini data BARU (belum punya ID) dan form tahun & sumber dana sudah terisi
     if (!editedItem.value.id && newTahun && newSumberDanaId) {
       const prevYear = (newTahun as number) - 1;
       
-      // Cari apakah ada pagu definitif di tahun sebelumnya untuk sumber dana yang sama
-      const prevData = tableData.value.find(
+      const prevData = tableData.value.items.find(
         (item: any) => item.tahun === prevYear && item.sumberDanaId === newSumberDanaId
       );
 
@@ -174,14 +175,12 @@ watch(
     }
   }
 );
-// ================================================
 
 onBeforeMount(() => {
   checkPermission("PAGU_ANGGARAN.VIEW");
 });
 
 onMounted(() => {
-  loadAll();
   loadMasterSumberDana();
 });
 
@@ -194,29 +193,38 @@ async function loadMasterSumberDana() {
   }
 }
 
-async function loadAll(searchQuery = "") {
+async function loadAll() {
+  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
   isLoading.value = true;
   try {
-    const res: any = await paguAnggaranService().retrieve();
-    tableData.value = res.data || [];
-    
-    if (searchQuery) {
-      filteredData.value = tableData.value.filter((item: any) => 
-        item.sumberDanaName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.tahun.toString().includes(searchQuery)
-      );
-    } else {
-      filteredData.value = tableData.value;
-    }
+    const res: any = await paguAnggaranService().retrieve({
+      q: q || "",
+      pageSize: pageSize ?? 10,
+      pageNumber: pageNumber ?? 1,
+      sortBy: sortBy || "createdAt",
+      sortType: sortType || "desc",
+    });
+
+    const payload = res.data?.data || res.data || {};
+    const items = payload.items || (Array.isArray(payload) ? payload : []);
+    const meta = payload.meta || {};
+    const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
+    tableData.value = {
+      items: items,
+      meta: {
+        totalItems: total,
+      },
+    };
   } catch (err) {
-    console.error(err);
+    console.error("Gagal memuat data pagu:", err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
   } finally {
     isLoading.value = false;
   }
 }
 
 function handleSave() {
-  // Set default definitif ke 0 jika kosong
   if (!editedItem.value.paguDefinitif) {
     editedItem.value.paguDefinitif = 0;
   }
@@ -238,7 +246,7 @@ function addItem() {
   resetDialog.value = false;
   isAutoFilled.value = false;
   editedItem.value = { 
-    tahun: currentYear + 1, // Di set ke Tahun Depan sebagai default penyusunan RKP
+    tahun: currentYear + 1, 
     paguEstimasi: null,
     paguDefinitif: 0 
   }; 

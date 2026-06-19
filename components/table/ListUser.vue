@@ -11,7 +11,7 @@
       <v-row>
         <v-col cols="12" md="3">
           <v-autocomplete
-            label="Role"
+            label="Filter Role"
             v-model="filter.idRole"
             :items="listRole"
             item-value="id"
@@ -29,7 +29,7 @@
           <v-text-field
             v-model="filter.q"
             density="compact"
-            label="Cari ( Tekan Enter )"
+            label="Cari User ( Tekan Enter )"
             @keyup.enter="handleApplyFilter"
             @click:clear="handleClear"
             hide-details
@@ -60,16 +60,23 @@
         class="datatabels productlist"
         :headers="headers"
         :items="tableData.items"
-        :server-items-length="tableData.meta.totalItems"
+        :server-items-length="tableData.meta?.totalItems || 0"
         :items-per-page="itemsPerPage"
         :loading="loading"
         v-model:sort-by="sortBy"
         item-value="id"
         hide-default-footer
       >
-        <template v-slot:[`item.no`]="{ item }">
-          {{ numberInc + parseInt(tableData.items.indexOf(item)) + 1 }}.
+        <template v-slot:[`item.no`]="{ index }">
+          {{ numberInc + index + 1 }}.
         </template>
+        
+        <template v-slot:[`item.role`]="{ item }">
+          <v-chip color="info" size="small" variant="flat">
+            {{ item.roleName }}
+          </v-chip>
+        </template>
+
         <template v-slot:[`item.actions`]="{ item }">
           <v-btn
             v-if="hasPermission('UPDATE')"
@@ -114,8 +121,8 @@
 
       <v-row class="mt-3">
         <v-col md="6" cols="12">
-          <div class="d-flex" style="font-size: 15px;"
-            >Tampilkan &nbsp;
+          <div class="d-flex" style="font-size: 15px;">
+            Tampilkan &nbsp;
             <div style="width:80px; margin-top:-8px;">
               <v-select
                 v-model="filter.pageSize"
@@ -129,14 +136,16 @@
                 @update:modelValue="getItemPerPage"
               ></v-select>
             </div>
-            &nbsp; dari {{ tableData.meta.totalItems }} data</div>
+            &nbsp; dari {{ tableData.meta?.totalItems || 0 }} data
+          </div>
         </v-col>
         <v-col md="6" cols="12">
           <div style="float: right;">
             <SharedPagination
               class="mb-2"
+              :value="filter.pageNumber"
               :items-per-page="itemsPerPage"
-              :total-items="tableData.meta.totalItems"
+              :total-items="tableData.meta?.totalItems || 0"
               @handlePaginate="handlePageChanged"
             />
           </div>
@@ -145,19 +154,18 @@
     </v-card-text>
   </v-card>
 </template>
+
 <script>
 export default {
   props: {
     title: { type: String },
-    defaultSortBy: { type: String },
+    defaultSortBy: { type: String, default: "createdAt" },
     searchTitle: { type: String },
     tableData: {
       type: Object,
-      default: { items: [], meta: { total: 0 } },
+      default: () => ({ items: [], meta: { totalItems: 0 } }),
     },
-    headers: { type: Array, default: [] },
-    itemFilter: { type: Array, default: () => [] },
-    labelFilter: { type: String, default: () => "Filter" },
+    headers: { type: Array, default: () => [] },
     permission: { type: String, default: "" },
     loading: { type: Boolean, default: false },
     listRole: { type: Array, default: () => [] },
@@ -172,10 +180,9 @@ export default {
         { value: 50, title: "50" },
       ],
       sortBy: [{ key: this.defaultSortBy, order: "desc" }],
-      sortDesc: [true],
       filter: {
         q: "",
-        pageSize: this.itemsPerPage,
+        pageSize: 10,
         pageNumber: 1,
         sortBy: this.defaultSortBy,
         sortType: "desc",
@@ -185,14 +192,13 @@ export default {
   },
   computed: {
     numberInc() {
-      return parseInt(this.filter.pageNumber - 1) * this.itemsPerPage;
+      return (parseInt(this.filter.pageNumber) - 1) * this.itemsPerPage;
     },
   },
   methods: {
-    hasPermission(val){
+    hasPermission(val) {
       const { hasPermission } = usePermission();
-      const tag = `${this.permission}.${val}`;
-      return hasPermission(tag);
+      return hasPermission(`${this.permission}.${val}`);
     },
     handleApplyFilter() {
       const filter = Object.assign({}, this.filter);
@@ -208,11 +214,9 @@ export default {
       this.$router.replace({ path: this.$route.path, query: this.filter });
     },
     handleRefreshItems() {
-      const resetFilter = Object.assign({}, this.filter);
-      resetFilter.q = "";
-      resetFilter.pageNumber = 1;
-      resetFilter.t = Date.now();
-      this.filter = resetFilter;
+      this.filter.q = "";
+      this.filter.pageNumber = 1;
+      this.filter.t = Date.now();
       this.handleApplyFilter();
     },
     handleAddItem() {
@@ -233,19 +237,20 @@ export default {
       this.$router.replace({ path: this.$route.path, query: this.filter });
     },
     async handleClear() {
-      this.handleResetFilter();
-      this.filter.t = Date.now();
+      this.filter.q = "";
+      this.filter.pageNumber = 1;
       this.$router.replace({ path: this.$route.path, query: this.filter });
     },
-    handleResetFilter() {
-      this.filter = {
-        pageNumber: 1,
-        pageSize: this.itemsPerPage,
-        q: "",
-        sortBy: this.defaultSortBy,
-        sortType: "desc",
-        t: Date.now(),
-      };
+    getItemPerPage(val) {
+      this.itemsPerPage = +val;
+      this.filter.pageSize = this.itemsPerPage;
+      this.$router.replace({ path: this.$route.path, query: this.filter });
+    },
+    updateFilterQuery(query) {
+      const filter = Object.assign(this.filter, query);
+      filter.pageNumber = parseInt(filter.pageNumber) || 1;
+      filter.pageSize = parseInt(filter.pageSize ? filter.pageSize : this.itemsPerPage);
+      return filter;
     },
     handleSort() {
       if (this.sortBy.length > 0) {
@@ -254,15 +259,11 @@ export default {
         this.$router.replace({ path: this.$route.path, query: this.filter });
       }
     },
-    getItemPerPage(val) {
-      this.itemsPerPage = +val;
-      this.filter.pageSize = this.itemsPerPage;
-      this.$router.replace({ path: this.$route.path, query: this.filter });
-    },
   },
   watch: {
     "$route.query": {
       handler(query) {
+        this.filter = this.updateFilterQuery(query);
         this.$emit("fetchData");
       },
       immediate: true,
@@ -273,12 +274,12 @@ export default {
   },
 };
 </script>
+
 <style scoped>
 .dt-table > td {
   border: 1px solid #d8dbe0 !important;
   border-collapse: collapse;
 }
-
 .select {
   width: 60px;
 }

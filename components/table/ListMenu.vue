@@ -36,19 +36,13 @@
         class="datatabels productlist"
         :headers="headers"
         :items="tableData.items"
-        :server-items-length="tableData.meta.totalItems"
+        :server-items-length="tableData.meta?.totalItems || 0"
         :items-per-page="itemsPerPage"
         :loading="loading"
         v-model:sort-by="sortBy"
         item-value="id"
         hide-default-footer
       >
-        <!-- :items-per-page-options="itemsPerPageOptions"
-        @update:page="handlePageChanged"
-        @update:items-per-page="getItemPerPage" -->
-        <!-- <template v-slot:loading>
-          <v-skeleton-loader type="table-row@5"></v-skeleton-loader>
-        </template> -->
         <template v-slot:[`item.no`]="{ item }">
           {{ numberInc + parseInt(tableData.items.indexOf(item)) + 1 }}.
         </template>
@@ -62,7 +56,7 @@
             class="mr-1"
             @click="handleEditItem(item)"
           >
-            <EditIcon class="text-warning" size="18" />
+            <v-icon size="18">mdi-pencil</v-icon>
             <v-tooltip activator="parent" location="bottom">Edit</v-tooltip>
           </v-btn>
 
@@ -70,18 +64,17 @@
             v-if="hasPermission('DELETE')"
             icon
             variant="tonal"
-            color="warning"
+            color="error"
             size="32"
             class="mr-1"
             @click="deleteItem(item)"
           >
-            <TrashIcon class="text-error" size="18" />
+            <v-icon size="18">mdi-delete</v-icon>
             <v-tooltip activator="parent" location="bottom">Hapus</v-tooltip>
           </v-btn>
         </template>
       </v-data-table>
 
-      <!-- Custom Pagination -->
       <v-row class="mt-3">
         <v-col md="6" cols="12">
           <div class="d-flex" style="font-size: 15px;"
@@ -99,14 +92,15 @@
                 @update:modelValue="getItemPerPage"
               ></v-select>
             </div>
-            &nbsp; dari {{ tableData.meta.totalItems }} data</div>
+            &nbsp; dari {{ tableData.meta?.totalItems || 0 }} data</div>
         </v-col>
         <v-col md="6" cols="12">
           <div style="float: right;">
             <SharedPagination
               class="mb-2"
+              :value="filter.pageNumber"
               :items-per-page="itemsPerPage"
-              :total-items="tableData.meta.totalItems"
+              :total-items="tableData.meta?.totalItems || 0"
               @handlePaginate="handlePageChanged"
             />
           </div>
@@ -114,8 +108,8 @@
       </v-row>
    </div>   
 </template>
+
 <script>
-// import { PAGE_SIZE } from "~/constants/global";
 export default {
   props: {
     title: {
@@ -129,16 +123,11 @@ export default {
     },
     tableData: {
       type: Object,
-      default: {
-        items: [],
-        meta: {
-          total: 0,
-        },
-      },
+      default: () => ({ items: [], meta: { totalItems: 0 } }),
     },
     headers: {
       type: Array,
-      default: [],
+      default: () => [],
     },
     itemFilter: {
       type: Array,
@@ -175,7 +164,7 @@ export default {
       sortDesc: [true],
       filter: {
         q: "",
-        pageSize: this.itemsPerPage,
+        pageSize: 10,
         pageNumber: 1,
         sortBy: this.defaultSortBy,
         sortType: "desc",
@@ -190,9 +179,9 @@ export default {
   },
   methods: {
     hasPermission(val){
-      const { hasPermission } = usePermission()
-      const tag = `${this.permission}.${val}`
-      return hasPermission(tag)
+      const { hasPermission } = usePermission();
+      const tag = `${this.permission}.${val}`;
+      return hasPermission(tag);
     },
 
     handleApplyFilter() {
@@ -221,7 +210,6 @@ export default {
       this.$emit("addItem");
     },
     handleEditItem(item) {
-      // copy item to a before edit
       let a = JSON.parse(JSON.stringify(item));
       this.$emit("editItem", a);
     },
@@ -237,7 +225,7 @@ export default {
     },
     updateFilterQuery(query) {
       const filter = Object.assign(this.filter, query);
-      filter.pageNumber = parseInt(filter.pageNumber);
+      filter.pageNumber = parseInt(filter.pageNumber) || 1;
       filter.pageSize = parseInt(
         filter.pageSize ? filter.pageSize : this.itemsPerPage
       );

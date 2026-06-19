@@ -12,7 +12,7 @@
           variant="outlined"
           density="compact"
           hide-details
-          @update:modelValue="loadData"
+          @update:modelValue="handleTahunChange"
         ></v-autocomplete>
       </v-col>
     </v-row>
@@ -52,6 +52,7 @@
       :loading="isLoading"
       permission="RAPBDES"
       title="Daftar Usulan Sinkronisasi (RAPBDes)"
+      @fetchData="loadData"
       @editItem="openEditDialog"
       @kembalikan="kembalikanKeRKP"
       @sahkan="sahkanKeAPBDes"
@@ -76,10 +77,19 @@
         color="primary"
         variant="outlined"
         density="compact"
-        :rules="[(v) => !!v || 'Wajib diisi']"
+        :rules="[(v: any) => !!v || 'Wajib diisi']"
         placeholder="Pilih Sumber Dana"
         hide-details="auto"
       ></v-autocomplete>
+
+      <v-label class="mb-2 mt-3 font-weight-medium">Nilai RAB Baru (Rp)</v-label>
+      <v-text-field
+        v-model.number="editedItem.nilaiRab"
+        type="number"
+        density="compact"
+        :rules="[(v: any) => !!v || 'Wajib diisi', (v: any) => v > 0 || 'RAB harus lebih dari 0']"
+        hide-details="auto"
+      ></v-text-field>
 
       <v-label class="mb-2 mt-3 font-weight-medium">Nilai RAB Baru (Rp)</v-label>
       <v-text-field
@@ -90,7 +100,6 @@
         hide-details="auto"
       ></v-text-field>
     </DialogForm>
-
   </div>
 </template>
 
@@ -118,7 +127,15 @@ const isLoadingSave = ref(false);
 const dialog = ref(false);
 const resetDialog = ref(true);
 
-const tableData = ref<any[]>([]);
+const route = useRoute();
+const router = useRouter();
+
+// Menggunakan object format untuk Pagination
+const tableData = ref<any>({
+  items: [],
+  meta: { totalItems: 0 }
+});
+
 const listSumberDana = ref<any[]>([]);
 const kartuKeuangan = ref<any[]>([]);
 const editedItem = ref<any>({});
@@ -141,11 +158,17 @@ onBeforeMount(() => {
 
 onMounted(() => {
   loadMasterSumberDana();
-  loadData();
 });
 
 function formatRupiah(value: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value || 0);
+}
+
+function handleTahunChange() {
+  const currentQuery = { ...route.query };
+  currentQuery.pageNumber = "1";
+  router.replace({ path: route.path, query: currentQuery });
+  loadData();
 }
 
 async function loadMasterSumberDana() {
@@ -156,49 +179,82 @@ async function loadMasterSumberDana() {
 }
 
 async function loadData() {
+  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
   isLoading.value = true;
   try {
-    // 1. Tarik Pagu Anggaran
-    const resPagu: any = await paguAnggaranService().retrieve();
-    const paguTahunIni = (resPagu.data || []).filter((p: any) => p.tahun === selectedTahun.value);
+    // 1. Tarik Semua Pagu (Bypass Limit sementara, atau Anda bisa buatkan endpoint /all juga untuk Pagu nanti)
+    const resPagu: any = await paguAnggaranService().retrieve({ pageSize: 1000, pageNumber: 1 });
+    const allPagu = resPagu.data?.items || resPagu.data || [];
+    const paguTahunIni = allPagu.filter((p: any) => p.tahun === selectedTahun.value);
 
-    // 2. Tarik Semua Usulan Proyek
-    const resUsulan: any = await usulanProyekService().retrieve();
-    const semuaUsulan = resUsulan.data || [];
+    // 2. Tarik Semua Usulan Proyek menggunakan endpoint baru /all yang jauh lebih bersih
+    const resUsulan: any = await usulanProyekService().retrieveAllData();
+    const semuaUsulan = resUsulan.data?.data || resUsulan.data || [];
 
-    // Filter usulan khusus tahap RAPBDes untuk tabel
-    tableData.value = semuaUsulan.filter((u: any) => u.tahunAnggaran === selectedTahun.value && u.statusTahapan === 'RAPBDes');
-    
-    // Usulan yang ikut menguras pagu adalah yang statusnya RAPBDes ATAU APBDes
-    const usulanMengurasPagu = semuaUsulan.filter((u: any) => u.tahunAnggaran === selectedTahun.value && (u.statusTahapan === 'RAPBDes' || u.statusTahapan === 'APBDes'));
+    const usulanMengurasPagu = semuaUsulan.filter((u: any) => 
+      u.tahunAnggaran === selectedTahun.value && (u.statusTahapan === 'RAPBDes' || u.statusTahapan === 'APBDes')
+    );
 
-    // 3. Kalkulasi Kartu Keuangan
+    // 3. Kalkulasi Kartu Keuangan (Akurat karena menghitung dari keseluruhan data)
     kartuKeuangan.value = paguTahunIni.map((pagu: any) => {
-      // Hitung total RAB usulan yang memakai sumber dana ini
       const terpakai = usulanMengurasPagu
         .filter((u: any) => u.sumberDanaId === pagu.sumberDanaId)
         .reduce((sum: number, u: any) => sum + Number(u.nilaiRab), 0);
       
-      // 👇 PERUBAHAN KRUSIAL DI SINI 👇
-      // Menggunakan paguDefinitif. Jika pagu definitif belum diinput (0), pakai paguEstimasi.
       const nilaiPagu = Number(pagu.paguDefinitif) > 0 ? Number(pagu.paguDefinitif) : Number(pagu.paguEstimasi);
-      
       return {
         sumberDanaId: pagu.sumberDanaId,
         namaSumber: pagu.sumberDanaName,
-        pagu: nilaiPagu, // <-- Sekarang menggunakan nilaiPagu yang sudah diseleksi
+        pagu: nilaiPagu,
         terpakai: terpakai,
         sisa: nilaiPagu - terpakai
       };
     });
 
+    // 4. LOGIKA CLIENT-SIDE PAGINATION UNTUK TABEL
+    let dataTabel = semuaUsulan.filter((u: any) => u.tahunAnggaran === selectedTahun.value && u.statusTahapan === 'RAPBDes');
+
+    // Filter Pencarian Lokal
+    if (q) {
+      const queryStr = String(q).toLowerCase();
+      dataTabel = dataTabel.filter((u: any) => 
+        u.namaProyek?.toLowerCase().includes(queryStr) || 
+        u.sumberDanaName?.toLowerCase().includes(queryStr)
+      );
+    }
+
+    // Filter Pengurutan (Sorting) Lokal
+    const sortKey = (sortBy as string) || 'nilaiPreferensiV';
+    const order = (sortType as string) || 'desc';
+    
+    dataTabel.sort((a: any, b: any) => {
+      let valA = a[sortKey] ?? 0;
+      let valB = b[sortKey] ?? 0;
+      if (valA < valB) return order === 'asc' ? -1 : 1;
+      if (valA > valB) return order === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    // Slicing Array (Memotong data sesuai nomor halaman dan pageSize dari URL)
+    const size = parseInt(pageSize as string) || 10;
+    const page = parseInt(pageNumber as string) || 1;
+    const totalItems = dataTabel.length;
+    const start = (page - 1) * size;
+    const paginatedItems = dataTabel.slice(start, start + size);
+
+    // Lempar ke UI (Tabel)
+    tableData.value = {
+      items: paginatedItems,
+      meta: { totalItems }
+    };
+
   } catch (err) {
     console.error(err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
   } finally {
     isLoading.value = false;
   }
 }
-
 function openEditDialog(item: any) {
   resetDialog.value = false;
   editedItem.value = JSON.parse(JSON.stringify(item));
@@ -211,7 +267,7 @@ async function simpanRevisi() {
     await usulanProyekService().save(editedItem.value);
     useToast("success", "Revisi berhasil disimpan!");
     dialog.value = false;
-    loadData(); // Refresh data dan kartu keuangan
+    loadData();
   } catch (err) {
     console.error(err);
   } finally {
@@ -220,7 +276,7 @@ async function simpanRevisi() {
 }
 
 async function kembalikanKeRKP(item: any) {
-  const tahunLuncuran = item.tahunAnggaran + 1; // Menghitung tahun luncuran (tahun depan)
+  const tahunLuncuran = item.tahunAnggaran + 1; 
 
   Swal.fire({
     title: "Kembalikan ke RKP?",
@@ -232,32 +288,24 @@ async function kembalikanKeRKP(item: any) {
     cancelButtonText: "Batal"
   }).then(async (result) => {
     if (result.isConfirmed) {
-      // 1. Ubah status kembali menjadi RKP
       item.statusTahapan = 'RKP';
-      // 2. Tambahkan tahun anggarannya (+1)
       item.tahunAnggaran = tahunLuncuran; 
-      
-      // 3. Simpan perubahan ke backend
       await usulanProyekService().save(item);
       useToast("success", `Usulan berhasil diluncurkan ke RKP Tahun ${tahunLuncuran}`);
-      
-      // 4. Refresh data agar usulan tersebut hilang dari layar RAPBDes tahun ini
       loadData(); 
     }
   });
 }
 
 async function sahkanKeAPBDes(item: any) {
-  // Validasi 1: Harus punya sumber dana
   if (!item.sumberDanaId) {
     Swal.fire("Gagal", "Silakan set Sumber Dana terlebih dahulu lewat tombol Edit (Revisi)!", "error");
     return;
   }
 
-  // Validasi 2: Cek Defisit di Kartu Keuangan (UR-F18)
   const kartu = kartuKeuangan.value.find(k => k.sumberDanaId === item.sumberDanaId);
-  if (kartu && kartu.sisa < 0) {
-    Swal.fire("Anggaran Defisit!", `Tidak dapat mengesahkan karena anggaran ${kartu.namaSumber} sedang defisit. Silakan revisi RAB atau kembalikan usulan lain ke RKP.`, "error");
+  if (kartu && kartu.sisa < Number(item.nilaiRab)) {
+    Swal.fire("Anggaran Defisit!", `Tidak dapat mengesahkan karena anggaran ${kartu.namaSumber} tidak mencukupi (Sisa: ${formatRupiah(kartu.sisa)}). Silakan revisi RAB.`, "error");
     return;
   }
 

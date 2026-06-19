@@ -43,6 +43,13 @@ const kriteriaService = () => {
       method: "DELETE",
     });
   }
+  // Tambahkan di dalam composable service Kriteria Anda
+  async function retrievePaging(req?: any) {
+    return useAPIs(`${url}/page`, {
+      method: "GET",
+      params: req,
+    });
+  }
 
   return {
     retrieve,
@@ -51,6 +58,7 @@ const kriteriaService = () => {
     create,
     update,
     destroy,
+    retrievePaging,
   };
 };
 

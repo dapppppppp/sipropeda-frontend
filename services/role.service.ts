@@ -51,6 +51,13 @@ const roleService = () => {
     });
   }
 
+  async function retrievePaging(req?: any) {
+    return useAPIs(`${url}/page`, {
+      method: "GET",
+      params: req,
+    });
+  }
+
   return {
     retrieve,
     retrieveAll,
@@ -59,6 +66,7 @@ const roleService = () => {
     create,
     update,
     destroy,
+    retrievePaging,
   };
 };
 

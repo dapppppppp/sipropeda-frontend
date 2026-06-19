@@ -7,7 +7,7 @@
 
     <TableListPenilaian
       :headers="headers"
-      :tableData="filteredData"
+      :tableData="tableData"
       :loading="isLoading"
       title="Daftar Usulan (Pilih untuk Dinilai)"
       permission="PENILAIAN"
@@ -101,8 +101,13 @@ const dialog = ref(false);
 const resetDialog = ref(true);
 const dialogTitle = ref("Form Penilaian");
 
-const tableData = ref<any[]>([]);
-const filteredData = ref<any[]>([]);
+// Mengubah menjadi object terpaginasi
+const tableData = ref<any>({
+  items: [],
+  meta: {
+    totalItems: 0,
+  },
+});
 const listKriteria = ref<any[]>([]);
 
 const formNilai = ref<any>({});
@@ -113,19 +118,18 @@ const headers = ref([
   { title: "Tahun", key: "tahunAnggaran", width: "10%", align: "center" },
   { title: "Nama Kegiatan", key: "namaProyek" },
   { title: "Lokasi", key: "lokasi" },
-  // SEKARANG MENAMPILKAN KOLOML STATUS
   { title: "Status", key: "status", align: "center", width: "15%", sortable: false },
   { title: "Aksi", key: "actions", align: "center", width: "12%", sortable: false },
 ]);
 
 const { checkPermission } = usePermission();
+const route = useRoute();
 
 onBeforeMount(() => {
   checkPermission("PENILAIAN.VIEW");
 });
 
 onMounted(() => {
-  loadAll();
   loadMasterKriteria();
 });
 
@@ -138,22 +142,33 @@ async function loadMasterKriteria() {
   }
 }
 
-async function loadAll(searchQuery = "") {
+// Logic loadAll menggunakan parameter route dan membaca meta pagination
+async function loadAll() {
+  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
   isLoading.value = true;
   try {
-    const res: any = await usulanProyekService().retrieve();
-    tableData.value = res.data || [];
-    
-    if (searchQuery) {
-      filteredData.value = tableData.value.filter((item: any) => 
-        item.namaProyek?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.lokasi?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    } else {
-      filteredData.value = tableData.value;
-    }
+    const res: any = await usulanProyekService().retrieve({
+      q: q || "",
+      pageSize: pageSize ?? 10,
+      pageNumber: pageNumber ?? 1,
+      sortBy: sortBy || "createdAt",
+      sortType: sortType || "desc",
+    });
+
+    const payload = res.data?.data || res.data || {};
+    const items = payload.items || (Array.isArray(payload) ? payload : []);
+    const meta = payload.meta || {};
+    const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
+    tableData.value = {
+      items: items,
+      meta: {
+        totalItems: total,
+      },
+    };
   } catch (err) {
-    console.error(err);
+    console.error("Gagal menarik data usulan:", err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
   } finally {
     isLoading.value = false;
   }
@@ -200,7 +215,7 @@ function handleSave() {
     .saveBulk(payload)
     .then(() => {
       handleClose();
-      loadAll(); // MEMPERBARUI LIST SECARA DINAMIS SETELAH SAVE SKSES
+      loadAll(); 
       useToast("success", "Penilaian Berhasil Disimpan");
     })
     .catch(() => {

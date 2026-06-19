@@ -7,7 +7,7 @@
 
     <TableListBidangPembangunan
       :headers="headers"
-      :tableData="filteredData"
+      :tableData="tableData"
       :loading="isLoading"
       title="Data Master Daftar Prioritas Program dan Kegiatan"
       permission="BIDANG_PEMBANGUNAN"
@@ -31,7 +31,7 @@
       <v-text-field
         v-model="editedItem.namaBidang"
         density="compact"
-        :rules="[(v) => !!v || 'Nama Bidang wajib diisi']"
+        :rules="[(v: any) => !!v || 'Nama Bidang wajib diisi']"
         placeholder="Contoh: Bidang Pelaksanaan Pembangunan Desa"
         hide-details="auto"
         variant="outlined"
@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onBeforeMount, onMounted } from "vue";
 import Swal from "sweetalert2";
 import bidangPembangunanService from "@/services/bidang_pembangunan.service";
 import { useToast } from "@/composables/useToast";
@@ -65,8 +66,11 @@ const dialog = ref(false);
 const resetDialog = ref(true);
 const dialogTitle = ref("Tambah Bidang Pembangunan");
 
-const tableData = ref<any[]>([]);
-const filteredData = ref<any[]>([]);
+// Menggunakan object format Pagination standar
+const tableData = ref<any>({
+  items: [],
+  meta: { totalItems: 0 },
+});
 
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
@@ -76,6 +80,7 @@ const headers = ref([
 
 const editedItem = ref<any>({});
 const { checkPermission } = usePermission();
+const route = useRoute();
 
 onBeforeMount(() => {
   checkPermission("BIDANG_PEMBANGUNAN.VIEW");
@@ -85,21 +90,30 @@ onMounted(() => {
   loadAll();
 });
 
-async function loadAll(searchQuery = "") {
+async function loadAll() {
+  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
   isLoading.value = true;
   try {
-    const res: any = await bidangPembangunanService().retrieve();
-    tableData.value = res.data || [];
+    const res: any = await bidangPembangunanService().retrievePaging({
+      q: q || "",
+      pageSize: pageSize ?? 10,
+      pageNumber: pageNumber ?? 1,
+      sortBy: sortBy || "createdAt",
+      sortType: sortType || "desc",
+    });
     
-    if (searchQuery) {
-      filteredData.value = tableData.value.filter((item: any) => 
-        item.namaBidang?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    } else {
-      filteredData.value = tableData.value;
-    }
+    const payload = res.data?.data || res.data || {};
+    const items = payload.items || (Array.isArray(payload) ? payload : []);
+    const meta = payload.meta || {};
+    const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
+    tableData.value = {
+      items: items,
+      meta: { totalItems: total },
+    };
   } catch (err) {
     console.error(err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
   } finally {
     isLoading.value = false;
   }

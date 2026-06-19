@@ -40,7 +40,7 @@
         color="primary"
         variant="outlined"
         density="compact"
-        :rules="[(v) => !!v || 'Wajib diisi']"
+        :rules="[(v: any) => !!v || 'Wajib diisi']"
         placeholder="Role"
         hide-details="auto"
       ></v-autocomplete>
@@ -49,7 +49,7 @@
       <v-text-field
         v-model="editedItem.name"
         density="compact"
-        :rules="[(v) => !!v || 'Wajib diisi']"
+        :rules="[(v: any) => !!v || 'Wajib diisi']"
         hide-details="auto"
         placeholder="Nama Lengkap"
         clearable
@@ -60,7 +60,7 @@
       <v-text-field
         v-model="editedItem.username"
         density="compact"
-        :rules="[(v) => !!v || 'Wajib diisi']"
+        :rules="[(v: any) => !!v || 'Wajib diisi']"
         placeholder="Username"
         hide-details="auto"
       ></v-text-field>
@@ -85,27 +85,23 @@
         @click:append-inner="showPassword = !showPassword"
         hide-details="auto"
       ></v-text-field>
-      <v-text-field
-        v-model="editedItem.password"
-        density="compact"
-        :rules="!editedItem.id ? passwordRules : []"
-        placeholder="Password"
-        :type="showPassword ? 'text' : 'password'"
-        :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-        @click:append-inner="showPassword = !showPassword"
-        hide-details="auto"
-      ></v-text-field>
+      
       <p v-if="editedItem.id" style="font-size: 12px" class="mb-0 mt-2">
-        *Kosongkan password, jika tidak ingin merubah password.
+        *Kosongkan password jika tidak ingin merubah password.
       </p>
     </DialogForm>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onBeforeMount, onMounted, computed } from "vue";
+import { useRoute } from "vue-router";
 import Swal from "sweetalert2";
 import userService from "@/services/user.service";
 import roleService from "@/services/role.service";
+import { usePermission } from "@/composables/usePermission";
+import { useToast } from "@/composables/useToast";
+import { useAuthStore } from "@/stores/auth";
 
 definePageMeta({
   layout: "admin",
@@ -114,21 +110,9 @@ definePageMeta({
 
 const pages = ref({ title: "User" });
 const breadcrumbs = ref([
-  {
-    text: "Dashboard",
-    disabled: false,
-    href: "/dashboard",
-  },
-  {
-    text: "Pengaturan",
-    disabled: true,
-    href: "#",
-  },
-  {
-    text: "User",
-    disabled: true,
-    href: "#",
-  },
+  { text: "Dashboard", disabled: false, href: "/dashboard" },
+  { text: "Pengaturan", disabled: true, href: "#" },
+  { text: "User", disabled: true, href: "#" },
 ]);
 
 const passwordRules = ref([
@@ -140,56 +124,42 @@ const emailRules = ref([
   (v: any) => !!v || "Wajib diisi",
   (v: string) => /.+@.+\..+/.test(v) || "Email tidak valid",
 ]);
+
 const route = useRoute();
-const isLoading: any = ref(false);
-const isLoadingSave: any = ref(false);
-const dialog: any = ref(false);
+const isLoading = ref(false);
+const isLoadingSave = ref(false);
+const dialog = ref(false);
 const resetDialog = ref(true);
 const showPassword = ref(false);
 const dialogTitle = ref("Tambah User");
-const page = ref(1);
-const itemPerPage = ref(10);
+
 const listRole = ref([]);
-const filter = ref({
-  q: "",
-  pageNumber: 1,
-  pageSize: itemPerPage.value,
-  sortBy: "",
-  sortType: "",
-});
-var tableData: any = ref({
+
+// Penampung Pagination Format
+const tableData = ref<any>({
   items: [],
-  meta: {
-    totalItems: 0,
-  },
+  meta: { totalItems: 0 },
 });
+
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
   { title: "Nama", key: "name" },
   { title: "Email", key: "email" },
   { title: "Role", key: "role" },
-  {
-    title: "Aksi",
-    key: "actions",
-    align: "center",
-    width: "10%",
-    sortable: false,
-  },
+  { title: "Aksi", key: "actions", align: "center", width: "10%", sortable: false },
 ]);
+
 const editedItem: any = ref({});
 const { checkPermission } = usePermission();
 
 const authStore = useAuthStore();
-const dataUser = computed(() =>
-  authStore.dataUser
-);
+const dataUser = computed(() => authStore.dataUser);
 
 onBeforeMount(() => {
   checkPermission("USER.VIEW");
 });
 
-onMounted(async () => {
-  loadAll();
+onMounted(() => {
   loadAllRole();
 });
 
@@ -201,25 +171,37 @@ function loadAllRole() {
     });
 }
 
+// LOGIKA LOAD ALL DIPERBARUI
 async function loadAll() {
-  const { pageNumber, pageSize, q, sortBy, sortType, idRole} = route.query;
+  const { pageNumber, pageSize, q, sortBy, sortType, idRole } = route.query;
   isLoading.value = true;
-  await userService()
-    .retrieve({
+  
+  try {
+    const res: any = await userService().retrieve({
       q: q || "",
-      pageSize: pageSize ? pageSize : itemPerPage.value,
-      pageNumber: pageNumber ? pageNumber : 1,
+      pageSize: pageSize ? Number(pageSize) : 10,
+      pageNumber: pageNumber ? Number(pageNumber) : 1,
       sortBy: sortBy,
       sortType: sortType,
       roleId: idRole,
-    })
-    .then((res: any) => {
-      isLoading.value = false;
-      tableData.value = {
-        items: res.data != null ? res.data.items : [],
-        meta: res.data != null ? res.data.meta : { totalItems: 0 },
-      };
-    }).catch(() => { isLoading.value = false; });
+    });
+    
+    // Ekstraksi data secara aman (Sapu Bersih)
+    const payload = res.data?.data || res.data || {};
+    const items = payload.items || (Array.isArray(payload) ? payload : []);
+    const meta = payload.meta || {};
+    const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
+    tableData.value = {
+      items: items,
+      meta: { totalItems: total },
+    };
+  } catch (err) {
+    console.error(err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 function handleSave() {
@@ -227,12 +209,12 @@ function handleSave() {
   isLoadingSave.value = true;
   userService()
     .save(editedItem.value)
-    .then((res: any) => {
+    .then(() => {
       handleClose();
       useToast("success", "Data Berhasil Disimpan");
       loadAll();
     })
-    .catch((err: any) => {
+    .catch(() => {
       isLoadingSave.value = false;
     });
 }
@@ -246,16 +228,17 @@ function addItem() {
 
 async function editItem(x: any) {
   resetDialog.value = false;
-  await userService()
-    .retrieveById(x.id)
-    .then((res: any) => {
-      if (res.data.id) {
-        editedItem.value = res.data;
-        dialogTitle.value = "Edit User";
-        editedItem.value.password = null;
-        dialog.value = true;
-      }
-    });
+  try {
+    const res: any = await userService().retrieveById(x.id);
+    if (res.data.id) {
+      editedItem.value = res.data;
+      dialogTitle.value = "Edit User";
+      editedItem.value.password = null;
+      dialog.value = true;
+    }
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 async function deleteItem(x: any) {
@@ -274,7 +257,7 @@ async function deleteItem(x: any) {
     if (result.isConfirmed) {
       userService()
         .destroy(x.id)
-        .then((response) => {
+        .then((response: any) => {
           if (response.data) {
             useToast("success", "Data Berhasil Dihapus");
             loadAll();
@@ -291,8 +274,6 @@ function handleClose() {
   dialog.value = false;
 }
 
-// Menghapus fungsi lookup yang tidak digunakan agar bersih dari error compile
-
 function resetPassword(item: any): void {
   const reset = {
     id: item.id,
@@ -301,8 +282,8 @@ function resetPassword(item: any): void {
   };
   userService()
     .resetPassword(reset)
-    .then((res: any) => {
-      useToast("success", "[" + item.username + "] berhasil di reset");
+    .then(() => {
+      useToast("success", "[" + item.username + "] berhasil di reset ke (12345678)");
     })
     .catch((err: any) => {
       console.log(err);

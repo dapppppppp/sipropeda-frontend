@@ -30,6 +30,28 @@
               </v-tooltip>
             </template>
             <template v-slot:append>
+              
+              <v-btn 
+                v-if="hasPermission('CREATE')" 
+                color="success" 
+                icon 
+                @click="triggerFileInput" 
+                size="32" 
+                variant="tonal"
+                class="mr-2"
+              >
+                <v-icon size="18">mdi-file-excel</v-icon>
+                <v-tooltip activator="parent" location="bottom">Import RKPDes</v-tooltip>
+              </v-btn>
+              
+              <input 
+                type="file" 
+                ref="fileInput" 
+                accept=".xlsx, .xls" 
+                style="display: none" 
+                @change="handleFileUpload" 
+              />
+
               <v-btn v-if="hasPermission('CREATE')" color="primary" icon @click="handleAddItem" size="32" variant="tonal">
                 <v-icon left dark> mdi-plus-circle-outline</v-icon>
                 <v-tooltip activator="parent" location="bottom">Tambah</v-tooltip>
@@ -43,13 +65,16 @@
       <v-data-table
         class="datatabels productlist"
         :headers="headers"
-        :items="tableData"
+        :items="tableData.items"
+        :server-items-length="tableData.meta?.totalItems || 0"
+        :items-per-page="itemsPerPage"
         :loading="loading"
+        v-model:sort-by="sortBy"
         item-value="id"
         hide-default-footer
       >
         <template v-slot:[`item.no`]="{ index }">
-          {{ index + 1 }}.
+          {{ numberInc + index + 1 }}.
         </template>
         
         <template v-slot:[`item.statusSifat`]="{ item }">
@@ -96,6 +121,39 @@
           </v-btn>
         </template>
       </v-data-table>
+
+      <v-row class="mt-3">
+        <v-col md="6" cols="12">
+          <div class="d-flex" style="font-size: 15px">
+            Tampilkan &nbsp;
+            <div style="width: 80px; margin-top: -8px">
+              <v-select
+                v-model="filter.pageSize"
+                :items="itemsPerPageOptions"
+                item-value="value"
+                item-title="title"
+                color="primary"
+                variant="outlined"
+                density="compact"
+                hide-details="auto"
+                @update:modelValue="getItemPerPage"
+              ></v-select>
+            </div>
+            &nbsp; dari {{ tableData.meta?.totalItems || 0 }} data
+          </div>
+        </v-col>
+        <v-col md="6" cols="12">
+          <div style="float: right">
+            <SharedPagination
+              class="mb-2"
+              :value="filter.pageNumber"
+              :items-per-page="itemsPerPage"
+              :total-items="tableData.meta?.totalItems || 0"
+              @handlePaginate="handlePageChanged"
+            />
+          </div>
+        </v-col>
+      </v-row>
     </v-card-text>
   </v-card>
 </template>
@@ -104,17 +162,47 @@
 export default {
   props: {
     title: { type: String },
-    tableData: { type: Array, default: () => [] },
+    // Tipe props diubah menjadi Object untuk menampung format terpaginasi backend
+    tableData: { 
+      type: Object, 
+      default: () => ({ items: [], meta: { totalItems: 0 } }) 
+    },
     headers: { type: Array, default: () => [] },
     permission: { type: String, default: "" },
     loading: { type: Boolean, default: false },
   },
   data() {
     return {
+      itemsPerPage: 10,
+      itemsPerPageOptions: [
+        { value: 10, title: "10" },
+        { value: 20, title: "20" },
+        { value: 40, title: "40" },
+        { value: 50, title: "50" },
+      ],
+      sortBy: [
+        {
+          key: "createdAt",
+          order: "desc",
+        },
+      ],
       filter: {
         q: "",
+        pageSize: 10,
+        pageNumber: 1,
+        sortBy: "createdAt",
+        sortType: "desc",
       },
     };
+  },
+  computed: {
+    // Fungsi menghitung indeks awal penomoran baris data
+    numberInc() {
+      const number =
+        parseInt(this.filter.pageNumber * this.itemsPerPage) -
+        this.itemsPerPage;
+      return number;
+    },
   },
   methods: {
     hasPermission(val) {
@@ -130,25 +218,40 @@ export default {
         minimumFractionDigits: 0
       }).format(value);
     },
-    // 👇 TAMBAHAN: Fungsi penentu warna badge status tahapan 👇
     getStatusColor(status) {
       if (!status) return "grey";
       switch (status.toUpperCase()) {
         case "RKP":
-          return "warning"; // Jingga / Oranye (Sedang dirancang)
+          return "warning"; 
         case "RAPBDES":
-          return "info";    // Biru (Tahap Sinkronisasi & Seleksi)
+          return "info";    
         case "APBDES":
-          return "success"; // Hijau (Sudah disahkan/final)
+          return "success"; 
         default:
           return "grey";
       }
     },
     handleApplyFilter() {
-      this.$emit("fetchData", this.filter.q);
+      const filter = Object.assign({}, this.filter);
+      this.filter = {
+        q: filter.q,
+        pageSize: this.itemsPerPage,
+        pageNumber: 1,
+        sortBy: this.sortBy[0]?.key || "createdAt",
+        sortType: this.sortBy[0]?.order || "desc",
+        t: Date.now(),
+      };
+      this.$router.replace({
+        path: this.$route.path,
+        query: this.filter,
+      });
     },
     handleRefreshItems() {
-      this.filter.q = "";
+      const resetFilter = Object.assign({}, this.filter);
+      resetFilter.q = "";
+      resetFilter.pageNumber = 1;
+      resetFilter.t = Date.now();
+      this.filter = resetFilter;
       this.handleApplyFilter();
     },
     handleAddItem() {
@@ -161,13 +264,87 @@ export default {
     deleteItem(item) {
       this.$emit("deleteItem", item);
     },
+    handlePageChanged(page) {
+      this.filter.pageNumber = page;
+      this.$router.replace({
+        path: this.$route.path,
+        query: this.filter,
+      });
+    },
+    getItemPerPage(val) {
+      this.itemsPerPage = +val;
+      this.filter.pageSize = this.itemsPerPage;
+      this.$router.replace({
+        path: this.$route.path,
+        query: this.filter,
+      });
+    },
+    updateFilterQuery(query) {
+      const filter = Object.assign(this.filter, query);
+      filter.pageNumber = parseInt(filter.pageNumber) || 1;
+      filter.pageSize = parseInt(
+        filter.pageSize ? filter.pageSize : this.itemsPerPage
+      );
+      filter.t = Date.now();
+      return filter;
+    },
+    handleSort() {
+      if (this.sortBy.length > 0) {
+        this.filter.sortBy = this.sortBy[0].key;
+        this.filter.sortType = this.sortBy[0].order;
+        this.$router.replace({
+          path: this.$route.path,
+          query: this.filter,
+        });
+      }
+    },
+    handleResetFilter() {
+      this.filter = {
+        pageNumber: 1,
+        pageSize: this.itemsPerPage,
+        q: "",
+        sortBy: "createdAt",
+        sortType: "desc",
+        t: Date.now(),
+      };
+    },
     async handleClear() {
-      this.filter.q = "";
-      this.handleApplyFilter();
+      this.handleResetFilter();
+      this.$router.replace({
+        path: this.$route.path,
+        query: this.filter,
+      });
+    },
+
+    triggerFileInput() {
+      this.$refs.fileInput.click();
+    },
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.$emit("importItem", file);
+      event.target.value = null; 
     },
   },
-  mounted() {
-    this.$emit("fetchData", "");
-  }
+  watch: {
+    // Watcher mendeteksi perubahan URL untuk meminta data baru dari server
+    "$route.query": {
+      handler(query) {
+        this.filter = this.updateFilterQuery(query);
+        this.$emit("fetchData");
+      },
+      immediate: true,
+    },
+    sortBy() {
+      this.handleSort();
+    },
+  },
 };
 </script>
+
+<style scoped>
+.dt-table > td {
+  border: 1px solid #d8dbe0 !important;
+  border-collapse: collapse;
+}
+</style>

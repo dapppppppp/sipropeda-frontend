@@ -81,7 +81,7 @@
             </v-autocomplete>
           </div>
           <v-text-field
-            v-model="editedItem.seq"
+            v-model.number="editedItem.seq"
             label="Urut"
             density="compact"
             :rules="[(v: any) => !!v || 'Wajib diisi']"
@@ -124,7 +124,10 @@
 
 <script setup lang="ts">
 import Swal from "sweetalert2";
-import menuService from "@/services/menu.service"; // Pastikan path import benar
+import menuService from "@/services/menu.service";
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import { useToast } from "@/composables/useToast";
 
 const route = useRoute();
 const isLoading: any = ref(false);
@@ -134,12 +137,12 @@ const resetDialog = ref(true);
 const dialogTitle = ref("Tambah Menu");
 const itemPerPage = ref(10);
 
-// PERBAIKAN: Berikan tipe 'any' agar TypeScript mengenali property 'raw' pada slot autocomplete
 const listMenu = ref<any[]>([]);
 const listLevel = [1, 2];
 const listAction = ["VIEW", "CREATE", "UPDATE", "DELETE"];
 
-var tableData: any = ref({
+// 1. UBAH KE OBJECT
+const tableData = ref<any>({
   items: [],
   meta: {
     totalItems: 0,
@@ -181,18 +184,28 @@ async function loadAll() {
     })
     .then((res: any) => {
       isLoading.value = false;
+      // 2. PARSING SECARA AMAN (SAPU BERSIH)
+      const payload = res.data?.data || res.data || {};
+      const items = payload.items || (Array.isArray(payload) ? payload : []);
+      const meta = payload.meta || {};
+      const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
       tableData.value = {
-        items: res.data != null ? res.data.items : [],
-        meta: res.data != null ? res.data.meta : { totalItems: 0 },
+        items: items,
+        meta: { totalItems: total },
       };
-    }).catch(() => { isLoading.value = false; });
+    }).catch(() => { 
+      isLoading.value = false; 
+      tableData.value = { items: [], meta: { totalItems: 0 } };
+    });
 }
 
 function loadAllMenu() {
   menuService()
     .retrieveAll()
     .then((response: any) => {
-      listMenu.value = response.data || [];
+      // 3. PARSING AMAN UNTUK DROPDOWN PARENT
+      listMenu.value = response.data?.data || response.data || [];
     });
 }
 

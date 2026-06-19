@@ -7,7 +7,7 @@
 
     <TableListUsulanProyek
       :headers="headers"
-      :tableData="filteredData"
+      :tableData="tableData"
       :loading="isLoading"
       title="Data Usulan Kegiatan (Draft RKP)"
       permission="USULAN_PROYEK"
@@ -15,6 +15,7 @@
       @addItem="addItem"
       @editItem="editItem"
       @deleteItem="deleteItem"
+      @importItem="handleImportItem"
     >
     </TableListUsulanProyek>
 
@@ -53,18 +54,18 @@
       </v-row>
 
       <v-label class="mb-2 mt-3 font-weight-medium">Bidang Pembangunan</v-label>
-<v-autocomplete
-  v-model="editedItem.bidangId"
-  :items="listBidang"
-  item-value="id"
-  item-title="namaBidang"
-  color="primary"
-  variant="outlined"
-  density="compact"
-  :rules="[(v) => !!v || 'Wajib diisi']"
-  placeholder="Pilih Bidang Pembangunan Sesuai Siskeudes"
-  hide-details="auto"
-></v-autocomplete>
+      <v-autocomplete
+        v-model="editedItem.bidangId"
+        :items="listBidang"
+        item-value="id"
+        item-title="namaBidang"
+        color="primary"
+        variant="outlined"
+        density="compact"
+        :rules="[(v) => !!v || 'Wajib diisi']"
+        placeholder="Pilih Bidang Pembangunan Sesuai Siskeudes"
+        hide-details="auto"
+      ></v-autocomplete>
 
       <v-label class="mb-2 mt-3 font-weight-medium">Lokasi / Sasaran</v-label>
       <v-textarea
@@ -128,9 +129,9 @@
 import Swal from "sweetalert2";
 import usulanProyekService from "@/services/usulan_proyek.service";
 import sumberDanaService from "@/services/sumber_dana.service";
-import { useToast } from "@/composables/useToast"; // Pastikan auto-import atau manual import jika error
+import { useToast } from "@/composables/useToast"; 
 import { usePermission } from "@/composables/usePermission";
-import bidangPembangunanService from "@/services/bidang_pembangunan.service"; // Import service bidang pembangunan
+import bidangPembangunanService from "@/services/bidang_pembangunan.service";
 
 definePageMeta({
   layout: "admin",
@@ -150,14 +151,19 @@ const dialog = ref(false);
 const resetDialog = ref(true);
 const dialogTitle = ref("Tambah Usulan Proyek");
 
-const tableData = ref<any[]>([]);
-const filteredData = ref<any[]>([]);
+// Mengubah struktur data menjadi objek penampung terpaginasi (Sama seperti Pegawai)
+const tableData = ref<any>({
+  items: [],
+  meta: {
+    totalItems: 0,
+  },
+});
 const listSumberDana = ref<any[]>([]);
+const listBidang = ref<any[]>([]); 
 
 const currentYear = new Date().getFullYear();
 const listTahun = ref([currentYear - 1, currentYear, currentYear + 1, currentYear + 2]);
 
-// 👇 PERUBAHAN: Menambahkan "Sumber Dana" ke header tabel agar rapi
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
   { title: "Tahun", key: "tahunAnggaran", width: "10%", align: "center" },
@@ -170,9 +176,19 @@ const headers = ref([
   { title: "Bidang", key: "bidangName" },
 ]);
 
-const listBidang = ref<any[]>([]); // Array penampung data master bidang
+const editedItem = ref<any>({});
+const { checkPermission } = usePermission();
+const route = useRoute(); // Menggunakan route komposer Nuxt/Vue
 
-// Fungsi untuk menarik data dari service backend
+onBeforeMount(() => {
+  checkPermission("USULAN_PROYEK.VIEW");
+});
+
+onMounted(() => {
+  loadMasterSumberDana();
+  loadMasterBidang(); 
+});
+
 async function loadMasterBidang() {
   try {
     const res: any = await bidangPembangunanService().retrieve();
@@ -181,24 +197,6 @@ async function loadMasterBidang() {
     console.error("Gagal load bidang pembangunan", err);
   }
 }
-
-// Dipanggil di dalam onMounted bersama dengan yang lain
-onMounted(() => {
-  loadAll();
-  loadMasterSumberDana();
-  loadMasterBidang(); // <-- Pemanggilan fungsi di sini
-});
-const editedItem = ref<any>({});
-const { checkPermission } = usePermission();
-
-onBeforeMount(() => {
-  checkPermission("USULAN_PROYEK.VIEW");
-});
-
-onMounted(() => {
-  loadAll();
-  loadMasterSumberDana();
-});
 
 async function loadMasterSumberDana() {
   try {
@@ -209,23 +207,39 @@ async function loadMasterSumberDana() {
   }
 }
 
-async function loadAll(searchQuery = "") {
+// Logic loadAll disesuaikan membaca State Query Params URL
+async function loadAll() {
+  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
   isLoading.value = true;
   try {
-    const res: any = await usulanProyekService().retrieve();
-    tableData.value = res.data || [];
+    const res: any = await usulanProyekService().retrieve({
+      q: q || "",
+      pageSize: pageSize ?? 10,
+      pageNumber: pageNumber ?? 1,
+      sortBy: sortBy,
+      sortType: sortType,
+    });
     
-    if (searchQuery) {
-      filteredData.value = tableData.value.filter((item: any) => 
-        item.namaProyek?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.lokasi?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.tahunAnggaran.toString().includes(searchQuery)
-      );
-    } else {
-      filteredData.value = tableData.value;
-    }
+    // 1. Ekstraksi cerdas: Deteksi apakah data dibungkus dalam properti 'data' lagi (response.Base)
+    const payload = res.data?.data || res.data || {};
+    
+    // 2. Ambil array items-nya
+    const items = payload.items || (Array.isArray(payload) ? payload : []);
+    const meta = payload.meta || {};
+
+    // 3. SAPU BERSIH: Cari tahu apa nama properti total data yang dipakai oleh Golang
+    const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
+    // 4. Petakan ke format baku yang diminta oleh komponen ListUsulanProyek.vue
+    tableData.value = {
+      items: items,
+      meta: {
+        totalItems: total,
+      },
+    };
   } catch (err) {
-    console.error(err);
+    console.error("Gagal memuat data Usulan Proyek:", err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
   } finally {
     isLoading.value = false;
   }
@@ -245,9 +259,9 @@ function handleSave() {
     });
 }
 
+// ... Fungsi Tambah, Edit, Hapus, dan Import Excel tetap dipertahankan utuh ...
 function addItem() {
   resetDialog.value = false;
-  // 👇 PERUBAHAN: Default Tahun dibuat +1 (Tahun Depan) sesuai siklus RKP
   editedItem.value = { 
     tahunAnggaran: currentYear + 1,
     statusSifat: 'Reguler'
@@ -298,5 +312,38 @@ function handleClose() {
   resetDialog.value = true;
   editedItem.value = {};
   dialog.value = false;
+}
+
+async function handleImportItem(file: File) {
+  const { value: tahun } = await Swal.fire({
+    title: 'Tahun Anggaran',
+    input: 'number',
+    inputLabel: 'Masukkan Tahun Anggaran untuk dokumen RKP ini:',
+    inputValue: currentYear + 1,
+    showCancelButton: true,
+    confirmButtonText: 'Mulai Import',
+    cancelButtonText: 'Batal',
+    inputValidator: (value) => {
+      if (!value) return 'Tahun anggaran wajib diisi!';
+    }
+  });
+
+  if (tahun) {
+    isLoading.value = true;
+    const formData = new FormData();
+    formData.append('file_excel', file);
+    formData.append('tahun_anggaran', tahun.toString());
+
+    try {
+      const res: any = await usulanProyekService().importExcel(formData);
+      useToast("success", res.data?.message || `Berhasil mengimpor data usulan proyek!`);
+      loadAll(); 
+    } catch (err: any) {
+      console.error(err);
+      Swal.fire("Gagal Import", err.response?.data?.message || "Format Excel tidak valid atau gagal dibaca.", "error");
+    } finally {
+      isLoading.value = false;
+    }
+  }
 }
 </script>

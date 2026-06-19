@@ -28,7 +28,7 @@
 
     <TableListKriteria
       :headers="headers"
-      :tableData="filteredData"
+      :tableData="tableData"
       :loading="isLoading"
       title="Data Kriteria TOPSIS"
       permission="KRITERIA"
@@ -144,7 +144,10 @@
 <script setup lang="ts">
 import Swal from "sweetalert2";
 import kriteriaService from "@/services/kriteria.service";
-import { ref, computed, onBeforeMount } from "vue";
+import { ref, computed, onBeforeMount, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import { usePermission } from "@/composables/usePermission";
+import { useToast } from "@/composables/useToast";
 
 definePageMeta({
   layout: "admin",
@@ -158,17 +161,21 @@ const breadcrumbs = ref([
   { text: "Kriteria", disabled: true, href: "#" },
 ]);
 
-// State untuk memunculkan Dialog Panduan
 const showGuideDialog = ref(false);
-
 const isLoading = ref(false);
 const isLoadingSave = ref(false);
 const dialog = ref(false);
 const resetDialog = ref(true);
 const dialogTitle = ref("Tambah Kriteria");
 
-const tableData = ref<any[]>([]);
-const filteredData = ref<any[]>([]);
+// TableData Format Object
+const tableData = ref<any>({
+  items: [],
+  meta: { totalItems: 0 },
+});
+
+// Penampung ALL Data untuk hitung total bobot UI secara presisi
+const allKriteria = ref<any[]>([]);
 
 const headers = ref([
   { title: "No", key: "no", width: "5%", align: "center", sortable: false },
@@ -181,33 +188,51 @@ const headers = ref([
 
 const editedItem = ref<any>({});
 const { checkPermission } = usePermission();
+const route = useRoute();
 
 onBeforeMount(() => {
   checkPermission("KRITERIA.VIEW");
 });
 
-// Menghitung total bobot secara reaktif
+onMounted(() => {
+  loadAll();
+});
+
+// Menghitung total bobot secara reaktif dari keseluruhan data (bukan yang terpotong halaman)
 const totalBobot = computed(() => {
-  const sum = tableData.value.reduce((acc, current) => acc + (Number(current.bobot) || 0), 0);
+  const sum = allKriteria.value.reduce((acc, current) => acc + (Number(current.bobot) || 0), 0);
   return Math.round(sum * 100) / 100; 
 });
 
-async function loadAll(searchQuery = "") {
+async function loadAll() {
+  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
   isLoading.value = true;
   try {
-    const res: any = await kriteriaService().retrieve();
-    tableData.value = res.data || [];
+    // 1. Tarik ALL Data (Untuk kebutuhan kalkulasi total bobot)
+    const resAll: any = await kriteriaService().retrieve();
+    allKriteria.value = resAll.data?.data || resAll.data || [];
+
+    // 2. Tarik Paging Data (Untuk tabel UI)
+    const resPaging: any = await kriteriaService().retrievePaging({
+      q: q || "",
+      pageSize: pageSize ?? 10,
+      pageNumber: pageNumber ?? 1,
+      sortBy: sortBy || "kode",
+      sortType: sortType || "asc",
+    });
     
-    if (searchQuery) {
-      filteredData.value = tableData.value.filter((item: any) => 
-        item.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        item.kode.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    } else {
-      filteredData.value = tableData.value;
-    }
+    const payload = resPaging.data?.data || resPaging.data || {};
+    const items = payload.items || (Array.isArray(payload) ? payload : []);
+    const meta = payload.meta || {};
+    const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
+    tableData.value = {
+      items: items,
+      meta: { totalItems: total },
+    };
   } catch (err) {
     console.error(err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
   } finally {
     isLoading.value = false;
   }

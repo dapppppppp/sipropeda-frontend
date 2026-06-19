@@ -43,7 +43,14 @@ const bidangPembangunanService = () => {
       method: "DELETE",
     });
   }
-
+  // Tambahkan fungsi khusus untuk melayani Halaman Utama tabel master
+  async function retrievePaging(req?: any) {
+    return useAPIs(`${url}/page`, {
+      method: "GET",
+      params: req,
+    });
+  }
+  // Ingat untuk mencantumkan "retrievePaging" di blok "return { ... }" di bagian bawah!
   return {
     retrieve,
     retrieveById,
@@ -51,6 +58,7 @@ const bidangPembangunanService = () => {
     create,
     update,
     destroy,
+    retrievePaging,
   };
 };
 

@@ -17,7 +17,7 @@
               variant="outlined"
               density="compact"
               hide-details
-              @update:modelValue="loadHasil"
+              @update:modelValue="handleTahunChange"
             ></v-autocomplete>
           </v-col>
           
@@ -38,11 +38,12 @@
     </v-card>
 
     <TableListPerankingan
-      v-if="tableData.length > 0 || isLoading"
+      v-if="tableData.items && tableData.items.length > 0 || isLoading"
       :headers="headers"
       :tableData="tableData"
       :loading="isLoading"
       :title="`Hasil Perankingan Tahun ${selectedTahun} - Tahap ${selectedTahap}`"
+      @fetchData="loadHasil"
       @promosikan="handlePromosi"
     >
     </TableListPerankingan>
@@ -81,14 +82,21 @@ const isCalculating = ref(false);
 const hasSearched = ref(false);
 
 const currentYear = new Date().getFullYear();
-// Menyesuaikan list tahun agar sejalan dengan Usulan Proyek (RKP difokuskan untuk tahun depan)
 const listTahun = ref([currentYear, currentYear + 1, currentYear + 2]); 
-const selectedTahun = ref(currentYear + 1); // Default langsung menunjuk tahun depan
+const selectedTahun = ref(currentYear + 1); 
 const selectedTahap = ref('RKP');
 
-const tableData = ref<any[]>([]);
+const route = useRoute();
+const router = useRouter();
 
-// Jadikan headers menggunakan 'computed'
+// Menggunakan objek terpaginasi
+const tableData = ref<any>({
+  items: [],
+  meta: {
+    totalItems: 0,
+  },
+});
+
 const headers = computed(() => {
   let baseHeaders = [
     { title: "Peringkat", key: "ranking", width: "10%", align: "center" },
@@ -111,20 +119,46 @@ onBeforeMount(() => {
   checkPermission("PERANKINGAN.VIEW");
 });
 
-onMounted(() => {
-  loadHasil(); // Otomatis load data di tahun default saat halaman dibuka
-});
+// Ketika user mengganti tahun, reset halaman ke 1 via URL
+function handleTahunChange() {
+  const currentQuery = { ...route.query };
+  currentQuery.pageNumber = "1";
+  router.replace({ path: route.path, query: currentQuery });
+  loadHasil();
+}
 
 async function loadHasil() {
   isLoading.value = true;
   hasSearched.value = true;
-  tableData.value = [];
   try {
-    const req = { tahun: selectedTahun.value, tahap: selectedTahap.value };
+    const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
+    
+    // Gabungkan parameter spesifik (tahun, tahap) dengan parameter pagination
+    const req = { 
+      tahun: selectedTahun.value, 
+      tahap: selectedTahap.value,
+      q: q || "",
+      pageSize: pageSize ?? 10,
+      pageNumber: pageNumber ?? 1,
+      sortBy: sortBy || "ranking",
+      sortType: sortType || "asc",
+    };
+    
     const res: any = await perankinganService().getArsip(req);
-    tableData.value = res.data || [];
+    const payload = res.data?.data || res.data || {};
+    const items = payload.items || (Array.isArray(payload) ? payload : []);
+    const meta = payload.meta || {};
+    const total = meta.totalItems ?? meta.totalData ?? meta.total_items ?? meta.total ?? items.length ?? 0;
+
+    tableData.value = {
+      items: items,
+      meta: {
+        totalItems: total,
+      },
+    };
   } catch (err) {
     console.error("Gagal load hasil perankingan", err);
+    tableData.value = { items: [], meta: { totalItems: 0 } };
   } finally {
     isLoading.value = false;
   }
@@ -149,7 +183,7 @@ function hitungTopsis() {
           tahunAnggaran: selectedTahun.value,
           tahapVersi: selectedTahap.value
         };
-        const res: any = await perankinganService().hitungTopsis(payload);
+        await perankinganService().hitungTopsis(payload);
         useToast("success", "Perhitungan TOPSIS Selesai!");
         loadHasil();
       } catch (err: any) {
@@ -180,12 +214,10 @@ async function handlePromosi(item: any) {
         let usulanData = resUsulan.data;
 
         usulanData.statusTahapan = 'RAPBDes';
-
         await usulanProyekService().save(usulanData);
         
         Swal.fire("Berhasil", "Usulan berhasil dipromosikan ke RAPBDes", "success");
-        tableData.value = tableData.value.filter(u => u.id !== item.id);
-        
+        loadHasil(); // Refresh data dari server
       } catch (err) {
         console.error("Gagal mempromosikan usulan", err);
         Swal.fire("Gagal", "Terjadi kesalahan sistem saat mempromosikan", "error");

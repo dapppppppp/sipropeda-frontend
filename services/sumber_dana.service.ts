@@ -43,6 +43,12 @@ const sumberDanaService = () => {
       method: "DELETE",
     });
   }
+  async function retrievePaging(req?: any) {
+    return useAPIs(`${url}/page`, {
+      method: "GET",
+      params: req,
+    });
+  }
 
   return {
     retrieve,
@@ -51,6 +57,7 @@ const sumberDanaService = () => {
     create,
     update,
     destroy,
+    retrievePaging,
   };
 };
 

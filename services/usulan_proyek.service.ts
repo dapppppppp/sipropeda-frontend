@@ -10,6 +10,13 @@ const usulanProyekService = () => {
     });
   }
 
+  // 👇 Fungsi baru ditambahkan di sini
+  async function retrieveAllData() {
+    return useAPIs(`${url}/all`, {
+      method: "GET",
+    });
+  }
+
   async function retrieveById(id: any) {
     return useAPIs(`${url}/${id}`, {
       method: "GET",
@@ -44,13 +51,22 @@ const usulanProyekService = () => {
     });
   }
 
+  async function importExcel(formData: FormData) {
+    return useAPIs(`${url}/import`, {
+      method: "POST",
+      body: formData,
+    });
+  }
+  
   return {
     retrieve,
+    retrieveAllData, // <-- Pastikan fungsi baru di-return
     retrieveById,
     save,
     create,
     update,
     destroy,
+    importExcel,
   };
 };
 

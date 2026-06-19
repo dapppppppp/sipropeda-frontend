@@ -78,7 +78,6 @@ const headers = ref([
   { title: "Lokasi", key: "lokasi" },
   { title: "Sifat", key: "statusSifat", align: "center" },
   { title: "Alokasi RAB", key: "nilaiRab", align: "right" },
-  // Kolom Peringkat sudah dihapus dari sini
   { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center", sortable: true },
 ]);
 
@@ -97,8 +96,9 @@ onMounted(() => {
 async function loadData() {
   isLoading.value = true;
   try {
-    const res: any = await usulanProyekService().retrieve();
-    const semuaUsulan = res.data || [];
+    // 👇 Memanggil endpoint /all yang baru dibuat!
+    const res: any = await usulanProyekService().retrieveAllData(); 
+    const semuaUsulan = res.data?.data || res.data || [];
     
     let filteredData = semuaUsulan.filter((u: any) => 
       u.tahunAnggaran === selectedTahun.value && u.statusTahapan === 'APBDes'
