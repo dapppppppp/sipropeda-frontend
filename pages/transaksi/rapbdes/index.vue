@@ -2,7 +2,7 @@
   <div>
     <SharedUiBreadcrumb :title="pages.title" :breadcrumbs="breadcrumbs"></SharedUiBreadcrumb>
 
-    <v-row class="mb-4">
+    <v-row class="mb-4" align="center">
       <v-col cols="12" md="4">
         <v-autocomplete
           v-model="selectedTahun"
@@ -14,6 +14,18 @@
           hide-details
           @update:modelValue="handleTahunChange"
         ></v-autocomplete>
+      </v-col>
+      
+      <v-col cols="12" md="8" class="text-right">
+        <v-btn
+           color="info"
+           size="large"
+           prepend-icon="mdi-printer"
+           @click="cetakRAPBDes"
+           :disabled="dataCetakLengkap.length === 0"
+        >
+          CETAK DOKUMEN RAPBDES
+        </v-btn>
       </v-col>
     </v-row>
 
@@ -90,16 +102,14 @@
         :rules="[(v: any) => !!v || 'Wajib diisi', (v: any) => v > 0 || 'RAB harus lebih dari 0']"
         hide-details="auto"
       ></v-text-field>
-
-      <v-label class="mb-2 mt-3 font-weight-medium">Nilai RAB Baru (Rp)</v-label>
-      <v-text-field
-        v-model.number="editedItem.nilaiRab"
-        type="number"
-        density="compact"
-        :rules="[(v) => !!v || 'Wajib diisi', (v) => v > 0 || 'RAB harus lebih dari 0']"
-        hide-details="auto"
-      ></v-text-field>
     </DialogForm>
+
+    <ExportAPBDES 
+      ref="exportDoc" 
+      :data="dataCetakLengkap" 
+      :tahun="selectedTahun" 
+      jenisDokumen="RAPBDES" 
+    />
   </div>
 </template>
 
@@ -108,6 +118,11 @@ import Swal from "sweetalert2";
 import usulanProyekService from "@/services/usulan_proyek.service";
 import paguAnggaranService from "@/services/pagu_anggaran.service";
 import sumberDanaService from "@/services/sumber_dana.service";
+import ExportAPBDES from "@/components/reports/ExportAPBDES.vue"; // Import Komponen Cetak
+import { ref, onBeforeMount, onMounted, nextTick } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { usePermission } from "@/composables/usePermission";
+import { useToast } from "@/composables/useToast";
 
 definePageMeta({ layout: "admin", middleware: ["auth"] });
 
@@ -127,10 +142,13 @@ const isLoadingSave = ref(false);
 const dialog = ref(false);
 const resetDialog = ref(true);
 
+// State untuk Cetak Dokumen
+const exportDoc = ref<any>(null);
+const dataCetakLengkap = ref<any[]>([]);
+
 const route = useRoute();
 const router = useRouter();
 
-// Menggunakan object format untuk Pagination
 const tableData = ref<any>({
   items: [],
   meta: { totalItems: 0 }
@@ -146,7 +164,6 @@ const headers = ref([
   { title: "Sumber Dana", key: "sumberDanaName", align: "center" },
   { title: "Nilai RAB", key: "nilaiRab", align: "right" },
   { title: "Aksi", key: "actions", align: "center", width: "15%", sortable: false },
-  { title: "Peringkat", key: "ranking", align: "center", sortable: false },
   { title: "Nilai Preferensi (V)", key: "nilaiPreferensiV", align: "center", sortable: true }
 ]);
 
@@ -182,12 +199,10 @@ async function loadData() {
   const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
   isLoading.value = true;
   try {
-    // 1. Tarik Semua Pagu (Bypass Limit sementara, atau Anda bisa buatkan endpoint /all juga untuk Pagu nanti)
     const resPagu: any = await paguAnggaranService().retrieve({ pageSize: 1000, pageNumber: 1 });
     const allPagu = resPagu.data?.items || resPagu.data || [];
     const paguTahunIni = allPagu.filter((p: any) => p.tahun === selectedTahun.value);
 
-    // 2. Tarik Semua Usulan Proyek menggunakan endpoint baru /all yang jauh lebih bersih
     const resUsulan: any = await usulanProyekService().retrieveAllData();
     const semuaUsulan = resUsulan.data?.data || resUsulan.data || [];
 
@@ -195,7 +210,6 @@ async function loadData() {
       u.tahunAnggaran === selectedTahun.value && (u.statusTahapan === 'RAPBDes' || u.statusTahapan === 'APBDes')
     );
 
-    // 3. Kalkulasi Kartu Keuangan (Akurat karena menghitung dari keseluruhan data)
     kartuKeuangan.value = paguTahunIni.map((pagu: any) => {
       const terpakai = usulanMengurasPagu
         .filter((u: any) => u.sumberDanaId === pagu.sumberDanaId)
@@ -211,10 +225,11 @@ async function loadData() {
       };
     });
 
-    // 4. LOGIKA CLIENT-SIDE PAGINATION UNTUK TABEL
-    let dataTabel = semuaUsulan.filter((u: any) => u.tahunAnggaran === selectedTahun.value && u.statusTahapan === 'RAPBDes');
+    let dataTabel = semuaUsulan.filter((u: any) => 
+      u.tahunAnggaran === selectedTahun.value && 
+      (u.statusTahapan === 'RAPBDes' || u.statusTahapan === 'APBDes')
+    );
 
-    // Filter Pencarian Lokal
     if (q) {
       const queryStr = String(q).toLowerCase();
       dataTabel = dataTabel.filter((u: any) => 
@@ -223,7 +238,6 @@ async function loadData() {
       );
     }
 
-    // Filter Pengurutan (Sorting) Lokal
     const sortKey = (sortBy as string) || 'nilaiPreferensiV';
     const order = (sortType as string) || 'desc';
     
@@ -235,14 +249,15 @@ async function loadData() {
       return 0;
     });
 
-    // Slicing Array (Memotong data sesuai nomor halaman dan pageSize dari URL)
+    // SIMPAN DATA UTUH KE STATE SEBELUM DIPOTONG PAGINATION
+    dataCetakLengkap.value = dataTabel;
+
     const size = parseInt(pageSize as string) || 10;
     const page = parseInt(pageNumber as string) || 1;
     const totalItems = dataTabel.length;
     const start = (page - 1) * size;
     const paginatedItems = dataTabel.slice(start, start + size);
 
-    // Lempar ke UI (Tabel)
     tableData.value = {
       items: paginatedItems,
       meta: { totalItems }
@@ -255,6 +270,16 @@ async function loadData() {
     isLoading.value = false;
   }
 }
+
+// Fungsi Pemicu Cetak Dokumen RAPBDes
+async function cetakRAPBDes() {
+  if (exportDoc.value) {
+    if (dataCetakLengkap.value.length === 0) return;
+    await nextTick();
+    await exportDoc.value.generateReport();
+  }
+}
+
 function openEditDialog(item: any) {
   resetDialog.value = false;
   editedItem.value = JSON.parse(JSON.stringify(item));
@@ -276,23 +301,35 @@ async function simpanRevisi() {
 }
 
 async function kembalikanKeRKP(item: any) {
-  const tahunLuncuran = item.tahunAnggaran + 1; 
+  const tahunIni = item.tahunAnggaran;
+  const tahunLuncuran = Number(item.tahunAnggaran) + 1; 
 
   Swal.fire({
-    title: "Kembalikan ke RKP?",
-    text: `Usulan [${item.namaProyek}] akan ditarik mundur ke tahap RKP dan diluncurkan (Carry-over) untuk perencanaan Tahun Anggaran ${tahunLuncuran}.`,
+    title: "Kembalikan & Luncurkan?",
+    text: `Pastikan Anda sudah mencetak dokumen RAPBDes tahun ini! Usulan [${item.namaProyek}] akan ditarik dari RAPBDes dan diluncurkan (Carry-over) menjadi draft RKP Tahun ${tahunLuncuran}.`,
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#d33",
-    confirmButtonText: "Ya, Kembalikan & Luncurkan",
+    confirmButtonText: "Ya, Luncurkan!",
     cancelButtonText: "Batal"
   }).then(async (result) => {
     if (result.isConfirmed) {
-      item.statusTahapan = 'RKP';
-      item.tahunAnggaran = tahunLuncuran; 
-      await usulanProyekService().save(item);
-      useToast("success", `Usulan berhasil diluncurkan ke RKP Tahun ${tahunLuncuran}`);
-      loadData(); 
+      try {
+        isLoading.value = true;
+        
+        item.statusTahapan = 'RKP';
+        item.tahunAnggaran = tahunLuncuran; 
+        item.nilaiPreferensiV = 0.0; 
+        
+        await usulanProyekService().save(item);
+        
+        useToast("success", `Usulan berhasil ditarik dan diluncurkan ke RKP Tahun ${tahunLuncuran}`);
+        loadData(); 
+      } catch (err) {
+        console.error(err);
+        Swal.fire("Gagal", "Terjadi kesalahan saat memproses data luncuran.", "error");
+        isLoading.value = false;
+      }
     }
   });
 }

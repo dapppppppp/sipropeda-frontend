@@ -69,43 +69,49 @@
         </template>
 
         <template v-slot:[`item.actions`]="{ item }">
-          <v-btn
-            v-if="hasPermission('UPDATE')"
-            color="warning"
-            size="small"
-            variant="tonal"
-            class="mr-1"
-            icon
-            @click="$emit('editItem', item.raw || item)"
-          >
-            <v-icon size="18">mdi-pencil</v-icon>
-            <v-tooltip activator="parent" location="bottom">Revisi RAB / Sumber Dana</v-tooltip>
-          </v-btn>
+          <template v-if="(item.raw || item).statusTahapan === 'RAPBDes'">
+            <v-btn
+              v-if="hasPermission('UPDATE')"
+              color="warning"
+              size="small"
+              variant="tonal"
+              class="mr-1"
+              icon
+              @click="$emit('editItem', item.raw || item)"
+            >
+              <v-icon size="18">mdi-pencil</v-icon>
+              <v-tooltip activator="parent" location="bottom">Revisi RAB / Sumber Dana</v-tooltip>
+            </v-btn>
 
-          <v-btn
-            v-if="hasPermission('UPDATE')"
-            color="error"
-            size="small"
-            variant="tonal"
-            class="mr-1"
-            icon
-            @click="$emit('kembalikan', item.raw || item)"
-          >
-            <v-icon size="18">mdi-arrow-u-left-top</v-icon>
-            <v-tooltip activator="parent" location="bottom">Kembalikan ke RKP</v-tooltip>
-          </v-btn>
+            <v-btn
+              v-if="hasPermission('UPDATE')"
+              color="error"
+              size="small"
+              variant="tonal"
+              class="mr-1"
+              icon
+              @click="$emit('kembalikan', item.raw || item)"
+            >
+              <v-icon size="18">mdi-arrow-u-left-top</v-icon>
+              <v-tooltip activator="parent" location="bottom">Kembalikan ke RKP</v-tooltip>
+            </v-btn>
 
-          <v-btn
-            v-if="hasPermission('UPDATE')"
-            color="success"
-            size="small"
-            variant="flat"
-            icon
-            @click="$emit('sahkan', item.raw || item)"
-          >
-            <v-icon size="18">mdi-check-all</v-icon>
-            <v-tooltip activator="parent" location="bottom">Sahkan ke APBDes</v-tooltip>
-          </v-btn>
+            <v-btn
+              v-if="hasPermission('UPDATE')"
+              color="success"
+              size="small"
+              variant="flat"
+              icon
+              @click="$emit('sahkan', item.raw || item)"
+            >
+              <v-icon size="18">mdi-check-all</v-icon>
+              <v-tooltip activator="parent" location="bottom">Sahkan ke APBDes</v-tooltip>
+            </v-btn>
+          </template>
+
+          <v-chip v-else color="info" size="small" variant="flat">
+            Disahkan (APBDes)
+          </v-chip>
         </template>
       </v-data-table>
 

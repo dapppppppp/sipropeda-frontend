@@ -41,32 +41,55 @@
         :items-per-page="itemsPerPage"
         :loading="loading"
         v-model:sort-by="sortBy"
-        item-value="id"
+        item-value="usulanId"
         hide-default-footer
       >
         <template v-slot:item.ranking="{ item }">
-          <span class="font-weight-bold text-subtitle-1 text-primary">
-            #{{ item.ranking }}
+          <span v-if="(item.raw || item).isCalculated" class="font-weight-bold text-subtitle-1 text-primary">
+            #{{ (item.raw || item).rankingRender }}
           </span>
+          <span v-else class="text-grey font-weight-bold">-</span>
         </template>
         
         <template v-slot:item.nilaiPreferensiV="{ item }">
-          <span class="font-weight-bold">
+          <v-chip v-if="!(item.raw || item).isCalculated" color="error" size="small" variant="outlined">
+            Belum Dihitung
+          </v-chip>
+          
+          <span v-else class="font-weight-bold">
             {{ Number((item.raw ? item.raw.nilaiPreferensiV : item.nilaiPreferensiV)).toFixed(4) }}
           </span>
         </template>
 
         <template v-slot:item.actions="{ item }">
-          <v-btn
-            color="success"
-            size="small"
-            variant="tonal"
-            prepend-icon="mdi-check-decagram"
-            @click="$emit('promosikan', item.raw || item)"
-          >
-            Promosikan
-            <v-tooltip activator="parent" location="bottom">Loloskan ke RAPBDes</v-tooltip>
-          </v-btn>
+          <div v-if="!isPrinted && (item.raw || item).isCalculated" class="text-caption text-error font-weight-bold">
+            <v-icon size="14" class="mr-1">mdi-lock</v-icon> Cetak RKP Dahulu
+          </div>
+          
+          <div v-else>
+            <v-btn
+              v-if="(item.raw || item).isCalculated"
+              color="success"
+              size="small"
+              variant="tonal"
+              prepend-icon="mdi-check-decagram"
+              class="mr-2"
+              @click="$emit('promosikan', item.raw || item)"
+            >
+              Promosikan
+            </v-btn>
+
+            <v-btn
+               color="error"
+               size="small"
+               variant="tonal"
+               icon
+               @click="$emit('luncurkan', item.raw || item)"
+            >
+              <v-icon size="18">mdi-calendar-arrow-right</v-icon>
+              <v-tooltip activator="parent" location="bottom">Tunda ke RKP Tahun Depan</v-tooltip>
+            </v-btn>
+          </div>
         </template>
       </v-data-table>
 
@@ -117,6 +140,7 @@ export default {
     },
     headers: { type: Array, default: () => [] },
     loading: { type: Boolean, default: false },
+    isPrinted: { type: Boolean, default: false }
   },
   data() {
     return {
@@ -128,16 +152,16 @@ export default {
       ],
       sortBy: [
         {
-          key: "ranking",
-          order: "asc", // Ranking diurutkan dari terkecil (1, 2, 3...)
+          key: "nilaiPreferensiV", // Sortir default menggunakan nilai
+          order: "desc", 
         },
       ],
       filter: {
         q: "",
         pageSize: 10,
         pageNumber: 1,
-        sortBy: "ranking",
-        sortType: "asc",
+        sortBy: "nilaiPreferensiV",
+        sortType: "desc",
       },
     };
   },
@@ -148,8 +172,8 @@ export default {
         q: filter.q,
         pageSize: this.itemsPerPage,
         pageNumber: 1,
-        sortBy: this.sortBy[0]?.key || "ranking",
-        sortType: this.sortBy[0]?.order || "asc",
+        sortBy: this.sortBy[0]?.key || "nilaiPreferensiV",
+        sortType: this.sortBy[0]?.order || "desc",
         t: Date.now(),
       };
       this.$router.replace({ path: this.$route.path, query: this.filter });

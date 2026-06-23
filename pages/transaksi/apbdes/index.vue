@@ -31,7 +31,8 @@
               <ExportAPBDES 
                 ref="exportApbdesRef"
                 :data="tableData" 
-                :tahun="selectedTahun" 
+                :tahun="selectedTahun"
+                jenisDokumen="APBDES" 
               />
               
             </v-col>
