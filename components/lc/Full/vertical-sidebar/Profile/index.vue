@@ -1,14 +1,17 @@
 <template>
-  <v-sheet rounded="md" color="lightsecondary" class="px-4 py-3 ExtraBox">
+  <v-sheet rounded="md" color="lightsecondary" class="px-3 py-3 ExtraBox">
     <div class="d-flex align-center hide-menu">
-      <v-avatar size="40">
-        <img :src="photoUrl" :alt="dataUser.name || 'User'" height="40" cover />
+      <v-avatar size="38">
+        <img v-if="photoUrl" :src="photoUrl" alt="User" height="38" cover />
+        <v-icon v-else color="primary" size="24">mdi-account-circle</v-icon>
       </v-avatar>
-      <div class="ml-4">
-        <h4 class="mb-n1 text-h6 textPrimary">{{ dataUser.name || "" }}</h4>
-        <span class="text-subtitle-2 textSecondary">{{
-          dataUser.role?.name || ""
-        }}</span>
+      <div class="ml-3 flex-grow-1 overflow-hidden">
+        <h4 class="mb-0 text-body-2 textPrimary font-weight-bold text-truncate" style="max-width: 125px;">
+          {{ dataUser.nama || "User" }}
+        </h4>
+        <div class="text-caption textSecondary text-uppercase text-truncate" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; max-width: 125px;">
+          {{ dataUser.role?.name || dataUser.roleName || "" }}
+        </div>
       </div>
       <div class="ml-auto">
         <v-btn
@@ -17,8 +20,9 @@
           rounded="md"
           color="primary"
           @click="handleLogout()"
+          size="small"
         >
-          <PowerIcon />
+          <PowerIcon size="18" />
           <v-tooltip activator="parent" location="top">Logout</v-tooltip>
         </v-btn>
       </div>
@@ -31,16 +35,17 @@ import { computed } from "vue";
 import { PowerIcon } from "vue-tabler-icons";
 import { useAuthStore } from "@/stores/auth";
 import Swal from "sweetalert2";
-const { statusLogin, logout }: any = useAuthStore();
+import { useRuntimeConfig } from "nuxt/app";
 
 const authStore = useAuthStore();
 const dataUser = computed(() => authStore.dataUser);
 const router = useRouter();
+const config = useRuntimeConfig();
 
 function getPhotoUrl(foto: string | null) {
   if (!foto) return "/images/profile/user-1.jpg";
-  const normalized = foto.replace(/^[\\/]+/, "").replace(/\\/g, "/");
-  return `/api/files?path=${encodeURIComponent("/" + normalized)}`;
+  const baseUrl = config.public.apiUrl || "http://localhost:8080/v1";
+  return `${baseUrl}/files?path=${foto}`;
 }
 
 const photoUrl = computed(() => getPhotoUrl(dataUser.value?.foto));
@@ -53,13 +58,11 @@ function handleLogout() {
     showCancelButton: true,
     confirmButtonColor: "#d33",
     cancelButtonColor: "#95a5a6",
-    confirmButtonText: "Ya",
+    confirmButtonText: "Ya, Keluar",
     cancelButtonText: "Batal",
-    showLoaderOnConfirm: true,
-    allowOutsideClick: false,
   }).then((result: any) => {
     if (result.isConfirmed) {
-      router.push("/logout");
+      authStore.logout();
     }
   });
 }

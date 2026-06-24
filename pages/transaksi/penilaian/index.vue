@@ -9,6 +9,9 @@
       :headers="headers"
       :tableData="tableData"
       :loading="isLoading"
+      :listTahun="listTahun"
+      :listBidang="listBidang"
+      :listSumberDana="listSumberDana"
       title="Daftar Usulan (Pilih untuk Dinilai)"
       permission="PENILAIAN"
       @fetchData="loadAll"
@@ -43,7 +46,7 @@
         >
           <strong class="text-subtitle-2">Panduan Pengisian Nilai:</strong>
           <ul class="ml-4 mt-1">
-            <li>Gunakan <strong>Nilai Riil</strong> (misal: Rp 10.000.000, atau 500 Meter) ATAU <strong>Skala Angka</strong> (misal: 1 - 100). Pastikan skalanya konsisten untuk semua usulan!</li>
+            <li><strong>Skala / Rentang Nilai:</strong> Ikuti petunjuk (hint) di bawah masing-masing kolom input. Jika tidak ada rentang khusus yang diminta, Anda bebas memasukkan Nilai Riil (misal: nominal RAB) atau Skala (1-10).</li>
             <li><strong><v-icon size="small" color="success">mdi-arrow-up</v-icon> Kriteria BENEFIT:</strong> Semakin <span class="text-success font-weight-bold">besar</span> nilainya, semakin baik (Prioritas naik).</li>
             <li><strong><v-icon size="small" color="error">mdi-arrow-down</v-icon> Kriteria COST:</strong> Semakin <span class="text-error font-weight-bold">kecil</span> nilainya, semakin baik (Prioritas naik).</li>
           </ul>
@@ -66,9 +69,9 @@
               type="number"
               density="compact"
               variant="outlined"
-              :rules="[(v) => v !== null && v !== '' && v >= 0 || 'Wajib diisi angka (Min: 0)']"
+              :rules="getValidationRules(kriteria)"
               :placeholder="`Masukkan nilai untuk ${kriteria.nama}`"
-              :hint="kriteria.jenis === 'benefit' ? 'Nilai besar lebih baik' : 'Nilai kecil lebih baik'"
+              :hint="getHint(kriteria)"
               persistent-hint
             ></v-text-field>
           </v-col>
@@ -82,6 +85,9 @@
 import usulanProyekService from "@/services/usulan_proyek.service";
 import kriteriaService from "@/services/kriteria.service";
 import penilaianService from "@/services/penilaian_usulan.service";
+import sumberDanaService from "@/services/sumber_dana.service";
+import bidangPembangunanService from "@/services/bidang_pembangunan.service";
+
 
 definePageMeta({
   layout: "admin",
@@ -109,6 +115,11 @@ const tableData = ref<any>({
   },
 });
 const listKriteria = ref<any[]>([]);
+const listSumberDana = ref<any[]>([]);
+const listBidang = ref<any[]>([]); 
+
+const currentYear = new Date().getFullYear();
+const listTahun = ref([currentYear - 1, currentYear, currentYear + 1, currentYear + 2]);
 
 const formNilai = ref<any>({});
 const selectedUsulan = ref<any>(null);
@@ -131,7 +142,27 @@ onBeforeMount(() => {
 
 onMounted(() => {
   loadMasterKriteria();
+  loadMasterSumberDana();
+  loadMasterBidang();
 });
+
+async function loadMasterBidang() {
+  try {
+    const res: any = await bidangPembangunanService().retrieve();
+    listBidang.value = res.data || [];
+  } catch (err) {
+    console.error("Gagal load bidang pembangunan", err);
+  }
+}
+
+async function loadMasterSumberDana() {
+  try {
+    const res: any = await sumberDanaService().retrieve();
+    listSumberDana.value = res.data || [];
+  } catch (err) {
+    console.error("Gagal load sumber dana", err);
+  }
+}
 
 async function loadMasterKriteria() {
   try {
@@ -144,7 +175,7 @@ async function loadMasterKriteria() {
 
 // Logic loadAll menggunakan parameter route dan membaca meta pagination
 async function loadAll() {
-  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
+  const { pageNumber, pageSize, q, sortBy, sortType, tahun, bidangId, sumberDanaId } = route.query;
   isLoading.value = true;
   try {
     const res: any = await usulanProyekService().retrieve({
@@ -153,6 +184,9 @@ async function loadAll() {
       pageNumber: pageNumber ?? 1,
       sortBy: sortBy || "createdAt",
       sortType: sortType || "desc",
+      tahun: tahun || "",
+      bidangId: bidangId || "",
+      sumberDanaId: sumberDanaId || ""
     });
 
     const payload = res.data?.data || res.data || {};
@@ -172,6 +206,31 @@ async function loadAll() {
   } finally {
     isLoading.value = false;
   }
+}
+
+function getValidationRules(kriteria: any) {
+  return [
+    (v: any) => v !== null && v !== '' && v >= 0 || 'Wajib diisi angka (Min: 0)',
+    (v: any) => {
+      const val = Number(v);
+      if (val === 0) return true; // 0 selalu diperbolehkan jika tidak masuk kategori ini
+      
+      if (kriteria.kode === 'K1' && (val < 75 || val > 100)) return 'Nilai K1 harus 0 atau antara 75-100';
+      if (kriteria.kode === 'K2' && (val < 50 || val > 74)) return 'Nilai K2 harus 0 atau antara 50-74';
+      if (kriteria.kode === 'K3' && (val < 25 || val > 49)) return 'Nilai K3 harus 0 atau antara 25-49';
+      if (kriteria.kode === 'K4' && (val < 1 || val > 24)) return 'Nilai K4 harus 0 atau antara 1-24';
+      
+      return true;
+    }
+  ];
+}
+
+function getHint(kriteria: any) {
+  if (kriteria.kode === 'K1') return "Isi 75-100 (atau 0 jika bukan kategori ini)";
+  if (kriteria.kode === 'K2') return "Isi 50-74 (atau 0 jika bukan kategori ini)";
+  if (kriteria.kode === 'K3') return "Isi 25-49 (atau 0 jika bukan kategori ini)";
+  if (kriteria.kode === 'K4') return "Isi 1-24 (atau 0 jika bukan kategori ini)";
+  return kriteria.jenis === 'benefit' ? 'Nilai besar lebih baik' : 'Nilai kecil lebih baik';
 }
 
 async function openDialogPenilaian(usulan: any) {

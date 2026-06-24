@@ -9,7 +9,27 @@
     <v-divider></v-divider>
     <v-card-text>
       <v-row>
-        <v-col cols="12" md="8"></v-col>
+        <v-col cols="12" md="8">
+          <v-slide-y-transition>
+            <div v-if="selectedItems.length > 0" class="d-flex align-center mt-2">
+              <span class="text-subtitle-2 mr-4 text-primary font-weight-bold">
+                {{ selectedItems.length }} usulan terpilih
+              </span>
+              <v-btn
+                color="success"
+                size="small"
+                prepend-icon="mdi-check-all"
+                @click="emitBulkPromote"
+                :disabled="isPrinted === false"
+              >
+                Sahkan Terpilih
+              </v-btn>
+              <span v-if="!isPrinted" class="text-caption text-error ml-3 mt-1">
+                <v-icon size="14">mdi-lock</v-icon> Cetak RAPBDes Dahulu
+              </span>
+            </div>
+          </v-slide-y-transition>
+        </v-col>
         <v-col cols="12" md="4">
           <v-text-field
             v-model="filter.q"
@@ -42,7 +62,9 @@
         :items-per-page="itemsPerPage"
         :loading="loading"
         v-model:sort-by="sortBy"
+        v-model="selectedItems"
         item-value="id"
+        show-select
         hide-default-footer
       >
         <template v-slot:[`item.no`]="{ index }">
@@ -181,9 +203,10 @@ export default {
         q: "",
         pageSize: 10,
         pageNumber: 1,
-        sortBy: "nilaiPreferensiV",
+        sortBy: "created_at",
         sortType: "desc",
       },
+      selectedItems: [],
     };
   },
   computed: {
@@ -245,11 +268,15 @@ export default {
       this.filter.pageNumber = 1;
       this.$router.replace({ path: this.$route.path, query: this.filter });
     },
+    emitBulkPromote() {
+      this.$emit("sahkanBulk", this.selectedItems);
+    }
   },
   watch: {
     "$route.query": {
       handler(query) {
         this.filter = this.updateFilterQuery(query);
+        this.selectedItems = [];
         this.$emit("fetchData");
       },
       immediate: true,

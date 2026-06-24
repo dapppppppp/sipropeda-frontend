@@ -57,6 +57,7 @@ import { ref, onBeforeMount, onMounted } from "vue";
 import usulanProyekService from "@/services/usulan_proyek.service";
 import ExportAPBDES from "@/components/reports/ExportAPBDES.vue";
 
+
 definePageMeta({ layout: "admin", middleware: ["auth"] });
 
 const pages = ref({ title: "Dokumen APBDes" });
@@ -67,7 +68,7 @@ const breadcrumbs = ref([
 ]);
 
 const currentYear = new Date().getFullYear();
-const listTahun = ref([currentYear - 1, currentYear, currentYear + 1]);
+const listTahun = ref<number[]>([currentYear - 1, currentYear, currentYear + 1, currentYear + 2]);
 const selectedTahun = ref(currentYear);
 
 const isLoading = ref(false);
@@ -105,12 +106,26 @@ async function loadData() {
       u.tahunAnggaran === selectedTahun.value && u.statusTahapan === 'APBDes'
     );
 
+    // 1. Urutkan berdasarkan nilai preferensi (V) secara global terlebih dahulu
     filteredData.sort((a: any, b: any) => {
-      const danaA = a.sumberDanaName || '';
-      const danaB = b.sumberDanaName || '';
+      const valA = Number(a.nilaiPreferensiV) || 0;
+      const valB = Number(b.nilaiPreferensiV) || 0;
+      return valB - valA;
+    });
+
+    // 2. Beri Nomor Urut (Ranking Global berdasarkan Nilai V)
+    filteredData = filteredData.map((item: any, index: number) => ({
+      ...item,
+      nomorUrut: index + 1
+    }));
+
+    // 3. Urutkan kembali berdasarkan Bidang Pembangunan agar rapi saat di-group
+    filteredData.sort((a: any, b: any) => {
+      const bidangA = a.bidangName || '';
+      const bidangB = b.bidangName || '';
       
-      if (danaA !== danaB) {
-        return danaA.localeCompare(danaB);
+      if (bidangA !== bidangB) {
+        return bidangA.localeCompare(bidangB);
       }
       
       const valA = Number(a.nilaiPreferensiV) || 0;
@@ -118,10 +133,7 @@ async function loadData() {
       return valB - valA;
     });
 
-    tableData.value = filteredData.map((item: any, index: number) => ({
-      ...item,
-      nomorUrut: index + 1
-    }));
+    tableData.value = filteredData;
 
   } catch (err) {
     console.error(err);

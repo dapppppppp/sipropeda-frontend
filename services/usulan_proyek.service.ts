@@ -17,6 +17,12 @@ const usulanProyekService = () => {
     });
   }
 
+  async function getAvailableYears() {
+    return useAPIs(`${url}/tahun-anggaran`, {
+      method: "GET",
+    });
+  }
+
   async function retrieveById(id: any) {
     return useAPIs(`${url}/${id}`, {
       method: "GET",
@@ -58,15 +64,24 @@ const usulanProyekService = () => {
     });
   }
   
+  async function bulkUpdateStatus(req: any) {
+    return useAPIs(`${url}/bulk-update-status`, {
+      method: "PUT",
+      body: req,
+    });
+  }
+
   return {
     retrieve,
-    retrieveAllData, // <-- Pastikan fungsi baru di-return
+    retrieveAllData,
     retrieveById,
     save,
     create,
     update,
+    bulkUpdateStatus,
     destroy,
     importExcel,
+    getAvailableYears,
   };
 };
 

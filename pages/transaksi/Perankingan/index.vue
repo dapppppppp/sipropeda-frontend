@@ -74,6 +74,7 @@
       :title="`Daftar Draft RKP Tahun ${selectedTahun}`"
       @fetchData="loadHasil"
       @promosikan="handlePromosi"
+      @promosikanBulk="handlePromosiBulk"
       @luncurkan="handleLuncurkan"
     >
     </TableListPerankingan>
@@ -106,6 +107,7 @@ import { useRoute, useRouter } from "vue-router";
 import { usePermission } from "@/composables/usePermission";
 import { useToast } from "@/composables/useToast";
 
+
 definePageMeta({ layout: "admin", middleware: ["auth"] });
 
 const pages = ref({ title: "Perankingan TOPSIS" });
@@ -123,7 +125,7 @@ const exportDoc = ref<any>(null);
 const dataCetakLengkap = ref<any[]>([]); 
 
 const currentYear = new Date().getFullYear();
-const listTahun = ref([currentYear, currentYear + 1, currentYear + 2]); 
+const listTahun = ref<number[]>([currentYear - 1, currentYear, currentYear + 1, currentYear + 2]); 
 const selectedTahun = ref(currentYear + 1); 
 const selectedTahap = ref('RKP');
 
@@ -157,6 +159,10 @@ const { checkPermission, hasPermission: checkUI } = usePermission();
 function hasPermission(val: string) { return checkUI(`PERANKINGAN.${val}`); }
 
 onBeforeMount(() => { checkPermission("PERANKINGAN.VIEW"); });
+
+onMounted(() => {
+  loadHasil();
+});
 
 function handleTahunChange() {
   const currentQuery = { ...route.query };
@@ -255,7 +261,7 @@ function hitungTopsis() {
         isPrinted.value = false;
         loadHasil(); // Refresh untuk melihat nilainya
       } catch (err: any) {
-        Swal.fire("Gagal", err.response?.data?.error || "Terjadi kesalahan", "error");
+        Swal.fire("Gagal", err.data?.error || err.data?.message || err.response?._data?.error || err.response?._data?.message || "Terjadi kesalahan", "error");
       } finally {
         isCalculating.value = false;
       }
@@ -296,8 +302,38 @@ async function handlePromosi(item: any) {
         
         useToast("success", "Berhasil dipromosikan ke RAPBDes");
         loadHasil(); 
-      } catch (err) {
-        Swal.fire("Gagal", "Terjadi kesalahan sistem saat mempromosikan", "error");
+      } catch (err: any) {
+        Swal.fire("Gagal", err.data?.error || err.data?.message || err.response?._data?.error || err.response?._data?.message || "Terjadi kesalahan sistem saat mempromosikan", "error");
+      } finally {
+        isLoading.value = false;
+      }
+    }
+  });
+}
+
+async function handlePromosiBulk(selectedIds: string[]) {
+  if (!selectedIds || selectedIds.length === 0) return;
+
+  Swal.fire({
+    title: "Promosikan Usulan Masal?",
+    text: `Anda akan memindahkan ${selectedIds.length} usulan terpilih ke tahap RAPBDes. Lanjutkan?`,
+    icon: "info",
+    showCancelButton: true,
+    confirmButtonColor: "#1e88e5",
+    confirmButtonText: "Ya, Promosikan Semua!",
+  }).then(async (result: any) => {
+    if (result.isConfirmed) {
+      isLoading.value = true;
+      try {
+        await usulanProyekService().bulkUpdateStatus({
+          ids: selectedIds,
+          statusTahapan: 'RAPBDes'
+        });
+        
+        useToast("success", `Berhasil mempromosikan ${selectedIds.length} usulan ke RAPBDes`);
+        loadHasil(); 
+      } catch (err: any) {
+        Swal.fire("Gagal", err.data?.error || err.data?.message || err.response?._data?.error || err.response?._data?.message || "Terjadi kesalahan sistem saat mempromosikan masal", "error");
       } finally {
         isLoading.value = false;
       }
@@ -331,8 +367,8 @@ async function handleLuncurkan(item: any) {
         
         useToast("success", "Usulan berhasil ditunda ke tahun depan.");
         loadHasil(); 
-      } catch (err) {
-        Swal.fire("Gagal", "Terjadi kesalahan sistem saat memproses.", "error");
+      } catch (err: any) {
+        Swal.fire("Gagal", err.data?.error || err.data?.message || err.response?._data?.error || err.response?._data?.message || "Terjadi kesalahan sistem saat memproses.", "error");
       } finally {
         isLoading.value = false;
       }

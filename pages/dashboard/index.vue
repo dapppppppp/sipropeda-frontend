@@ -2,63 +2,28 @@
   <div>
     <SharedUiBreadcrumb :title="pages.title" :breadcrumbs="breadcrumbs" />
 
-    <!-- ===== WELCOME BANNER ===== -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <v-card class="rounded-xl pa-6" style="background: #1B5E20;" elevation="0">
-          <div class="d-flex align-center justify-space-between flex-wrap gap-3">
-            <div>
-              <h2 class="text-h5 font-weight-bold text-white mb-1">
-                Selamat datang, {{ authStore.user?.nama || 'Admin Desa' }}! 👋
-              </h2>
-              <p class="text-body-2 mb-0" style="color: rgba(255,255,255,0.75); max-width: 560px; line-height: 1.6;">
-                Sistem Pendukung Keputusan Prioritas Pembangunan Infrastruktur Desa menggunakan metode TOPSIS dengan pembobotan dinamis.
-              </p>
-            </div>
-            <div class="d-flex gap-2">
-              <v-btn
-                variant="outlined"
-                color="white"
-                size="small"
-                prepend-icon="mdi-calculator-variant"
-                to="/perankingan"
-                class="text-white"
-              >
-                Hitung TOPSIS
-              </v-btn>
-              <v-btn
-                variant="tonal"
-                color="white"
-                size="small"
-                prepend-icon="mdi-plus"
-                to="/usulan/tambah"
-              >
-                Tambah Usulan
-              </v-btn>
-            </div>
-          </div>
-        </v-card>
+    <!-- ===== HEADER & FILTER TAHUN ===== -->
+    <v-row class="mb-4 mt-2 align-center justify-space-between">
+      <v-col cols="12" md="6">
+        <h2 class="text-h5 font-weight-bold text-grey-darken-3 mb-1">
+          Ringkasan Eksekutif
+        </h2>
+        <p class="text-body-2 text-medium-emphasis mb-0">
+          Pantau statistik dan status usulan prioritas pembangunan.
+        </p>
       </v-col>
-    </v-row>
-
-    <!-- ===== FILTER TAHUN ===== -->
-    <v-row class="mb-1 align-center">
-      <v-col cols="12" md="8">
-        <h3 class="text-h6 font-weight-bold text-primary">
-          Ringkasan eksekutif tahun {{ selectedTahun }}
-        </h3>
-      </v-col>
-      <v-col cols="12" md="4">
+      <v-col cols="12" md="3">
         <v-autocomplete
           v-model="selectedTahun"
           :items="listTahun"
-          label="Tahun anggaran"
+          label="Tahun Anggaran"
           color="primary"
           variant="outlined"
           density="compact"
           hide-details
-          prepend-inner-icon="mdi-calendar"
+          prepend-inner-icon="mdi-calendar-blank"
           @update:modelValue="loadDashboardData"
+          class="bg-white rounded-lg"
         />
       </v-col>
     </v-row>
@@ -118,39 +83,27 @@
 
     <!-- ===== CHARTS ROW ===== -->
     <v-row class="mb-2">
-      <!-- Distribusi per Kategori — pakai BarChart component -->
-      <v-col cols="12" md="7">
-        <BarChart
-          title="Distribusi Usulan per Kategori"
-          :series="chartKategoriSeries"
-          :categories="chartKategoriCategories"
-          :colors="chartKategoriColors"
-          :height="280"
-          :loading="isLoading"
-          y-unit=" usulan"
-        />
-      </v-col>
-
       <!-- Status Perankingan -->
-      <v-col cols="12" md="5">
+      <v-col cols="12">
         <v-card elevation="2" class="rounded-lg h-100">
           <v-card-title class="d-flex align-center pa-4 pb-2 text-body-1 font-weight-medium">
             <v-icon class="mr-2 text-primary" size="18">mdi-progress-check</v-icon>
             Status perankingan
           </v-card-title>
-          <v-card-text>
-            <div class="status-list">
-              <div v-for="item in statusItems" :key="item.label" class="mb-3">
-                <div class="d-flex justify-space-between mb-1">
-                  <span class="text-caption text-medium-emphasis">{{ item.label }}</span>
-                  <span class="text-caption font-weight-medium">{{ item.value }}</span>
+          <v-card-text class="pt-0">
+            <div class="status-list mt-2">
+              <div v-for="item in statusItems" :key="item.label" class="mb-4">
+                <div class="d-flex justify-space-between align-center mb-1">
+                  <span class="text-caption font-weight-medium text-grey-darken-2">{{ item.label }}</span>
+                  <span class="text-caption font-weight-bold" :class="`text-${item.color}`">{{ item.value }} Usulan</span>
                 </div>
                 <v-progress-linear
                   :model-value="item.pct"
                   :color="item.color"
                   bg-color="grey-lighten-4"
                   rounded
-                  height="6"
+                  height="8"
+                  striped
                 />
               </div>
             </div>
@@ -171,71 +124,6 @@
       </v-col>
     </v-row>
 
-    <!-- ===== TOP 5 TABLE ===== -->
-    <v-row>
-      <v-col cols="12">
-        <v-card elevation="2" class="rounded-lg">
-          <v-card-title
-            class="d-flex align-center pa-4 text-body-1 font-weight-medium text-white"
-            style="background: #1B5E20;"
-          >
-            <v-icon class="mr-2" color="white" size="18">mdi-podium-gold</v-icon>
-            Top 5 prioritas pembangunan tahun {{ selectedTahun }}
-          </v-card-title>
-          <v-divider />
-
-          <v-card-text class="pa-0">
-            <v-data-table
-              :headers="headersTop5"
-              :items="stats.top5Usulan"
-              :loading="isLoading"
-              hide-default-footer
-              class="elevation-0"
-            >
-              <template #no-data>
-                <div class="pa-8 text-center">
-                  <v-icon size="48" color="grey-lighten-2" class="mb-3">mdi-folder-open-outline</v-icon>
-                  <p class="text-body-2 text-medium-emphasis mb-3">
-                    Belum ada data perankingan untuk tahun ini.
-                  </p>
-                  <v-btn
-                    color="primary"
-                    size="small"
-                    variant="tonal"
-                    prepend-icon="mdi-calculator-variant"
-                    to="/perankingan"
-                  >
-                    Lakukan perhitungan TOPSIS
-                  </v-btn>
-                </div>
-              </template>
-
-              <template #item.ranking="{ item }: any">
-                <v-avatar
-                  :color="rankColor(item.ranking)"
-                  size="32"
-                  class="font-weight-bold text-body-2"
-                  :class="item.ranking <= 3 ? 'text-white' : 'text-medium-emphasis'"
-                >
-                  {{ item.ranking }}
-                </v-avatar>
-              </template>
-
-              <template #item.namaProyek="{ item }: any">
-                <div class="font-weight-medium text-body-2">{{ item.namaProyek }}</div>
-                <div v-if="item.kategori" class="text-caption text-medium-emphasis">{{ item.kategori }}</div>
-              </template>
-
-              <template #item.nilaiPreferensiV="{ item }: any">
-                <v-chip color="success" size="small" variant="tonal" class="font-weight-bold">
-                  {{ Number(item.nilaiPreferensiV).toFixed(4) }}
-                </v-chip>
-              </template>
-            </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
   </div>
 </template>
 
@@ -244,7 +132,6 @@ import { ref, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import dashboardService from '@/services/dashboard.service';
 import StatCard from '@/components/dashboard/StatCard.vue';
-import BarChart from '@/components/dashboard/DashboardBarChart.vue';
 
 definePageMeta({ layout: 'admin', middleware: ['auth'] });
 
@@ -255,11 +142,6 @@ interface TopUsulan {
   lokasi: string;
   kategori?: string;
   nilaiPreferensiV: number;
-}
-
-interface DistribusiItem {
-  label: string;
-  count: number;
 }
 
 interface DashboardStats {
@@ -280,8 +162,6 @@ interface DashboardStats {
 
   trendPagu?: number;
   trendPaguLabel?: string;
-
-  distribusiKategori?: DistribusiItem[];
 
   top5Usulan: TopUsulan[];
 }
@@ -311,21 +191,6 @@ const headersTop5 = ref<any[]>([
   { title: 'Lokasi / Dusun',    key: 'lokasi',                                             sortable: false },
   { title: 'Nilai TOPSIS (V)',   key: 'nilaiPreferensiV', align: 'center', width: '130px', sortable: false },
 ]);
-
-// ===== COMPUTED: data untuk BarChart =====
-const chartKategoriCategories = computed<string[]>(() =>
-  (stats.value.distribusiKategori ?? []).map(d => d.label)
-);
-
-const chartKategoriSeries = computed(() => [
-  {
-    name: 'Jumlah Usulan',
-    data: (stats.value.distribusiKategori ?? []).map(d => d.count),
-  },
-]);
-
-// Warna per-bar berbeda — distributed mode aktif otomatis karena lebih dari 1 warna
-const chartKategoriColors = ['#1B5E20', '#2E7D32', '#388E3C', '#43A047', '#66BB6A', '#A5D6A7'];
 
 // ===== COMPUTED: status perankingan =====
 const statusItems = computed(() => {
@@ -375,3 +240,14 @@ async function loadDashboardData() {
   }
 }
 </script>
+
+<style scoped>
+.custom-table-hover ::v-deep(tbody tr) {
+  transition: all 0.2s ease-in-out;
+}
+.custom-table-hover ::v-deep(tbody tr:hover) {
+  background-color: rgba(27, 94, 32, 0.04) !important;
+  transform: scale(1.002);
+  cursor: default;
+}
+</style>

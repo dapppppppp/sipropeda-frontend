@@ -9,6 +9,9 @@
       :headers="headers"
       :tableData="tableData"
       :loading="isLoading"
+      :listTahun="listTahun"
+      :listBidang="listBidang"
+      :listSumberDana="listSumberDana"
       title="Data Usulan Kegiatan (Draft RKP)"
       permission="USULAN_PROYEK"
       @fetchData="loadAll"
@@ -37,7 +40,7 @@
             color="primary"
             variant="outlined"
             density="compact"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             hide-details="auto"
           ></v-autocomplete>
         </v-col>
@@ -46,7 +49,7 @@
           <v-text-field
             v-model="editedItem.namaProyek"
             density="compact"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             placeholder="Contoh: Pelatihan Digital Marketing BUMDes"
             hide-details="auto"
           ></v-text-field>
@@ -62,7 +65,7 @@
         color="primary"
         variant="outlined"
         density="compact"
-        :rules="[(v) => !!v || 'Wajib diisi']"
+        :rules="[(v: any) => !!v || 'Wajib diisi']"
         placeholder="Pilih Bidang Pembangunan Sesuai Siskeudes"
         hide-details="auto"
       ></v-autocomplete>
@@ -73,7 +76,7 @@
         density="compact"
         rows="2"
         variant="outlined"
-        :rules="[(v) => !!v || 'Wajib diisi']"
+        :rules="[(v: any) => !!v || 'Wajib diisi']"
         placeholder="Contoh: Balai Desa Sumber Makmur"
         hide-details="auto"
       ></v-textarea>
@@ -87,7 +90,7 @@
             color="primary"
             variant="outlined"
             density="compact"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             hide-details="auto"
           ></v-autocomplete>
         </v-col>
@@ -101,7 +104,7 @@
             color="primary"
             variant="outlined"
             density="compact"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             placeholder="Pilih Sumber Dana"
             hide-details="auto"
           ></v-autocomplete>
@@ -130,6 +133,7 @@ import Swal from "sweetalert2";
 import usulanProyekService from "@/services/usulan_proyek.service";
 import sumberDanaService from "@/services/sumber_dana.service";
 import { useToast } from "@/composables/useToast"; 
+import { ref, onBeforeMount, onMounted, watch, nextTick } from "vue";
 import { usePermission } from "@/composables/usePermission";
 import bidangPembangunanService from "@/services/bidang_pembangunan.service";
 
@@ -186,7 +190,7 @@ onBeforeMount(() => {
 
 onMounted(() => {
   loadMasterSumberDana();
-  loadMasterBidang(); 
+  loadMasterBidang();
 });
 
 async function loadMasterBidang() {
@@ -209,7 +213,7 @@ async function loadMasterSumberDana() {
 
 // Logic loadAll disesuaikan membaca State Query Params URL
 async function loadAll() {
-  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
+  const { pageNumber, pageSize, q, sortBy, sortType, tahun, bidangId, sumberDanaId } = route.query;
   isLoading.value = true;
   try {
     const res: any = await usulanProyekService().retrieve({
@@ -218,6 +222,9 @@ async function loadAll() {
       pageNumber: pageNumber ?? 1,
       sortBy: sortBy,
       sortType: sortType,
+      tahun: tahun || "",
+      bidangId: bidangId || "",
+      sumberDanaId: sumberDanaId || ""
     });
     
     // 1. Ekstraksi cerdas: Deteksi apakah data dibungkus dalam properti 'data' lagi (response.Base)
@@ -340,7 +347,7 @@ async function handleImportItem(file: File) {
       loadAll(); 
     } catch (err: any) {
       console.error(err);
-      Swal.fire("Gagal Import", err.response?.data?.message || "Format Excel tidak valid atau gagal dibaca.", "error");
+      Swal.fire("Gagal Import", err.data?.error || err.data?.message || err.response?._data?.error || err.response?._data?.message || "Format Excel tidak valid atau gagal dibaca.", "error");
     } finally {
       isLoading.value = false;
     }

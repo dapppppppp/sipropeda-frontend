@@ -66,6 +66,27 @@ const userService = () => {
     });
   }
 
+  async function register(req: any) {
+    return useAPIs(`${url}/register`, {
+      method: "POST",
+      body: req,
+    });
+  }
+
+  async function forgotPassword(req: any) {
+    return useAPIs(`${url}/forgot-password`, {
+      method: "POST",
+      body: req,
+    });
+  }
+
+  async function verifikasiEmail(req: any) {
+    return useAPIs(`${url}/verifikasi-email`, {
+      method: "POST",
+      body: req,
+    });
+  }
+
   return {
     login,
     retrieve,
@@ -76,6 +97,9 @@ const userService = () => {
     destroy,
     resetPassword,
     updateFoto,
+    register,
+    forgotPassword,
+    verifikasiEmail,
   };
 };
 

@@ -21,13 +21,8 @@
 
 /*This is for the Vertical sidebar*/
 .scrollnavbar {
-    height: calc(100vh - 190px);
-
-    .userbottom {
-        position: fixed;
-        bottom: 0px;
-        width: 100%;
-    }
+    height: calc(100vh - 180px);
+    padding-bottom: 10px;
 
     .smallCap {
         padding: 3px 0px !important;
@@ -96,6 +91,16 @@
             }
         }
     }
+}
+
+.userbottom {
+    position: absolute;
+    bottom: 0px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 10;
+    background: rgb(var(--v-theme-surface)) !important;
 }
 
 .v-navigation-drawer--rail {

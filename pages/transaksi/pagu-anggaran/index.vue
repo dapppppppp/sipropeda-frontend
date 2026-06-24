@@ -9,6 +9,7 @@
       :headers="headers"
       :tableData="tableData"
       :loading="isLoading"
+      :listTahun="listTahun"
       title="Data Pagu Anggaran"
       permission="PAGU_ANGGARAN"
       @fetchData="loadAll"
@@ -36,7 +37,7 @@
             color="primary"
             variant="outlined"
             density="compact"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             placeholder="Pilih Tahun"
             hide-details="auto"
           ></v-autocomplete>
@@ -52,7 +53,7 @@
             color="primary"
             variant="outlined"
             density="compact"
-            :rules="[(v) => !!v || 'Wajib diisi']"
+            :rules="[(v: any) => !!v || 'Wajib diisi']"
             placeholder="Pilih Sumber Dana"
             hide-details="auto"
           ></v-autocomplete>
@@ -111,6 +112,7 @@ import paguAnggaranService from "@/services/pagu_anggaran.service";
 import sumberDanaService from "@/services/sumber_dana.service";
 import { useToast } from "@/composables/useToast";
 import { usePermission } from "@/composables/usePermission";
+
 
 definePageMeta({
   layout: "admin",
@@ -194,7 +196,7 @@ async function loadMasterSumberDana() {
 }
 
 async function loadAll() {
-  const { pageNumber, pageSize, q, sortBy, sortType } = route.query;
+  const { pageNumber, pageSize, q, sortBy, sortType, tahun } = route.query;
   isLoading.value = true;
   try {
     const res: any = await paguAnggaranService().retrieve({
@@ -203,6 +205,7 @@ async function loadAll() {
       pageNumber: pageNumber ?? 1,
       sortBy: sortBy || "createdAt",
       sortType: sortType || "desc",
+      tahun: tahun || "",
     });
 
     const payload = res.data?.data || res.data || {};

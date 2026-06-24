@@ -10,7 +10,19 @@
     <v-card-text>
       <v-row>
         <v-col cols="12" md="8"></v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="2">
+          <v-autocomplete
+            v-model="filter.tahun"
+            :items="listTahun"
+            label="Semua Tahun"
+            density="compact"
+            variant="outlined"
+            hide-details
+            clearable
+            @update:modelValue="handleApplyFilter"
+          ></v-autocomplete>
+        </v-col>
+        <v-col cols="12" md="2">
           <v-text-field
             v-model="filter.q"
             density="compact"
@@ -139,6 +151,7 @@ export default {
     headers: { type: Array, default: () => [] },
     permission: { type: String, default: "" },
     loading: { type: Boolean, default: false },
+    listTahun: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -161,6 +174,7 @@ export default {
         pageNumber: 1,
         sortBy: "createdAt",
         sortType: "desc",
+        tahun: null,
       },
     };
   },
@@ -194,6 +208,7 @@ export default {
         pageNumber: 1,
         sortBy: this.sortBy[0]?.key || "createdAt",
         sortType: this.sortBy[0]?.order || "desc",
+        tahun: filter.tahun,
         t: Date.now(),
       };
       this.$router.replace({ path: this.$route.path, query: this.filter });
@@ -201,6 +216,7 @@ export default {
     handleRefreshItems() {
       const resetFilter = Object.assign({}, this.filter);
       resetFilter.q = "";
+      resetFilter.tahun = null;
       resetFilter.pageNumber = 1;
       resetFilter.t = Date.now();
       this.filter = resetFilter;
@@ -244,6 +260,7 @@ export default {
         pageNumber: 1,
         pageSize: this.itemsPerPage,
         q: "",
+        tahun: null,
         sortBy: "createdAt",
         sortType: "desc",
         t: Date.now(),

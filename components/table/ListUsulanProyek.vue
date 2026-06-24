@@ -9,8 +9,47 @@
     <v-divider></v-divider>
     <v-card-text>
       <v-row>
-        <v-col cols="12" md="8"></v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="3">
+          <v-autocomplete
+            v-model="filter.tahun"
+            :items="listTahun"
+            label="Semua Tahun"
+            density="compact"
+            variant="outlined"
+            hide-details
+            clearable
+            @update:modelValue="handleApplyFilter"
+          ></v-autocomplete>
+        </v-col>
+        <v-col cols="12" md="3">
+          <v-autocomplete
+            v-model="filter.bidangId"
+            :items="listBidang"
+            item-value="id"
+            item-title="namaBidang"
+            label="Semua Bidang Pembangunan"
+            density="compact"
+            variant="outlined"
+            hide-details
+            clearable
+            @update:modelValue="handleApplyFilter"
+          ></v-autocomplete>
+        </v-col>
+        <v-col cols="12" md="3">
+          <v-autocomplete
+            v-model="filter.sumberDanaId"
+            :items="listSumberDana"
+            item-value="id"
+            item-title="namaSumber"
+            label="Semua Sumber Dana"
+            density="compact"
+            variant="outlined"
+            hide-details
+            clearable
+            @update:modelValue="handleApplyFilter"
+          ></v-autocomplete>
+        </v-col>
+        <v-col cols="12" md="3">
           <v-text-field
             v-model="filter.q"
             density="compact"
@@ -170,6 +209,9 @@ export default {
     headers: { type: Array, default: () => [] },
     permission: { type: String, default: "" },
     loading: { type: Boolean, default: false },
+    listTahun: { type: Array, default: () => [] },
+    listBidang: { type: Array, default: () => [] },
+    listSumberDana: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -192,6 +234,9 @@ export default {
         pageNumber: 1,
         sortBy: "createdAt",
         sortType: "desc",
+        tahun: null,
+        bidangId: null,
+        sumberDanaId: null,
       },
     };
   },
@@ -239,6 +284,9 @@ export default {
         pageNumber: 1,
         sortBy: this.sortBy[0]?.key || "createdAt",
         sortType: this.sortBy[0]?.order || "desc",
+        tahun: filter.tahun,
+        bidangId: filter.bidangId,
+        sumberDanaId: filter.sumberDanaId,
         t: Date.now(),
       };
       this.$router.replace({
@@ -249,6 +297,9 @@ export default {
     handleRefreshItems() {
       const resetFilter = Object.assign({}, this.filter);
       resetFilter.q = "";
+      resetFilter.tahun = null;
+      resetFilter.bidangId = null;
+      resetFilter.sumberDanaId = null;
       resetFilter.pageNumber = 1;
       resetFilter.t = Date.now();
       this.filter = resetFilter;
@@ -303,6 +354,9 @@ export default {
         pageNumber: 1,
         pageSize: this.itemsPerPage,
         q: "",
+        tahun: null,
+        bidangId: null,
+        sumberDanaId: null,
         sortBy: "createdAt",
         sortType: "desc",
         t: Date.now(),

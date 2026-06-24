@@ -21,7 +21,7 @@
         item-value="id"
         hide-default-footer
         :items-per-page="-1"
-        :group-by="[{ key: 'sumberDanaName' }]"
+        :group-by="[{ key: 'bidangName' }]"
         :sort-by="[{ key: 'nilaiPreferensiV', order: 'desc' }]"
       >
         <template v-slot:group-header="{ item, columns, toggleGroup, isGroupOpen }">
@@ -34,7 +34,7 @@
                 class="mr-2 hide-on-print"
                 @click="toggleGroup(item)"
               ></v-btn>
-              Sumber Dana: <span class="text-primary text-uppercase">{{ item.value || 'Belum Diset' }}</span>
+              Bidang Pembangunan: <span class="text-primary text-uppercase">{{ item.value || 'Belum Diset' }}</span>
             </td>
           </tr>
         </template>

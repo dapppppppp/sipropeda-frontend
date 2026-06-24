@@ -56,7 +56,7 @@ async function onSubmit() {
     }
 
   } catch (err: any) {
-    const errorMessage = err.response?.data?.message || "Gagal terhubung ke server.";
+    const errorMessage = err.data?.error || err.data?.message || err.response?._data?.error || err.response?._data?.message || "Gagal terhubung ke server.";
     useToast("error", errorMessage);
   }
 }

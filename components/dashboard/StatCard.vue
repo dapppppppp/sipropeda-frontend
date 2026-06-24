@@ -1,5 +1,5 @@
 <template>
-  <v-card elevation="0" :class="`rounded-xl border border-opacity-20`" style="overflow: hidden;">
+  <v-card elevation="0" :class="`rounded-xl border border-opacity-20 stat-card-hover`" style="overflow: hidden;">
     <!-- Left accent bar -->
     <div
       class="position-absolute top-0 left-0 h-100"
@@ -133,5 +133,13 @@ function formatRupiah(val: any) {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0);   }
+}
+
+.stat-card-hover {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.stat-card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
 }
 </style>

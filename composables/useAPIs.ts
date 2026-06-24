@@ -14,7 +14,7 @@ export const useAPIs = (url: any, opts: any = {}) => {
                 options.headers = { 
                     ...options.headers, 
                     Authorization: `Bearer ${token}` 
-                };
+                } as any;
             }
         },
         async onResponseError({ response }) {

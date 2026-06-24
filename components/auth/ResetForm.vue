@@ -45,7 +45,7 @@ async function handleForgotPassword() {
     }
 
   } catch (err: any) {
-    errorMsg.value = err.response?.data?.message || "Gagal terhubung ke server.";
+    errorMsg.value = err.data?.error || err.data?.message || err.response?._data?.error || err.response?._data?.message || "Gagal terhubung ke server.";
     useToast("error", errorMsg.value);
   } finally {
     isLoading.value = false;
